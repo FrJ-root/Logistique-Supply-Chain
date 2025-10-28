@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: logistics-postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: logisticsdb
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4:7
+    container_name: logistics-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@logistics.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5052:80"
+    depends_on:
+      - postgres
+
+  app:
+    build: .
+    container_name: logistics-app
+    ports:
+      - "8082:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/logisticsdb
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:
