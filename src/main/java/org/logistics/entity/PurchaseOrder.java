@@ -9,9 +9,13 @@ import java.util.List;
 
 @Entity
 @Table(name = "purchase_orders")
-@Data @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class PurchaseOrder {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(optional = false)
@@ -21,9 +25,31 @@ public class PurchaseOrder {
     private PurchaseOrderStatus status;
 
     private LocalDateTime createdAt;
-
     private LocalDateTime expectedDelivery;
 
     @OneToMany(mappedBy = "purchaseOrder")
     private List<PurchaseOrderLine> lines;
+
+    // Custom Builder
+    public static PurchaseOrderBuilder builder() { return new PurchaseOrderBuilder(); }
+
+    public static class PurchaseOrderBuilder {
+        private Long id;
+        private Supplier supplier;
+        private PurchaseOrderStatus status;
+        private LocalDateTime createdAt;
+        private LocalDateTime expectedDelivery;
+        private List<PurchaseOrderLine> lines;
+
+        public PurchaseOrderBuilder id(Long id) { this.id = id; return this; }
+        public PurchaseOrderBuilder supplier(Supplier supplier) { this.supplier = supplier; return this; }
+        public PurchaseOrderBuilder status(PurchaseOrderStatus status) { this.status = status; return this; }
+        public PurchaseOrderBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
+        public PurchaseOrderBuilder expectedDelivery(LocalDateTime expectedDelivery) { this.expectedDelivery = expectedDelivery; return this; }
+        public PurchaseOrderBuilder lines(List<PurchaseOrderLine> lines) { this.lines = lines; return this; }
+
+        public PurchaseOrder build() {
+            return new PurchaseOrder(id, supplier, status, createdAt, expectedDelivery, lines);
+        }
+    }
 }

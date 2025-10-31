@@ -1,9 +1,9 @@
-CREATE TABLE users(
-    id UUID PRIMARY KEY,
+CREATE TABLE users (
+    id BIGSERIAL PRIMARY KEY,
     email VARCHAR(120) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(30),
-    active BOOLEAN
+    role VARCHAR(50),
+    active BOOLEAN DEFAULT TRUE
 );
 
 CREATE TABLE clients(

@@ -1,8 +1,8 @@
 INSERT INTO users (id, email, password_hash, role, active)
 VALUES
-    (gen_random_uuid(), 'admin@logistics.com', 'pass123', 'ADMIN', true),
-    (gen_random_uuid(), 'client@logistics.com', 'pass123', 'CLIENT', true),
-    (gen_random_uuid(), 'manager@logistics.com', 'pass123', 'WAREHOUSE_MANAGER', true);
+    (1, 'admin@logistics.com', 'pass123', 'ADMIN', true),
+    (2, 'client@logistics.com', 'pass123', 'CLIENT', true),
+    (3, 'manager@logistics.com', 'pass123', 'WAREHOUSE_MANAGER', true);
 
 INSERT INTO clients (name, contact_info) VALUES
 ('ACME Retail', 'acme@contact.com'),
