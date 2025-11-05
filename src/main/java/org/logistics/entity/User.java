@@ -29,20 +29,19 @@ public class User {
     public static UserBuilder builder() { return new UserBuilder(); }
 
     public static class UserBuilder {
-        private Long id;
         private String email;
         private String passwordHash;
         private Role role;
         private boolean active = true;
 
-        public UserBuilder id(Long id) { this.id = id; return this; }
         public UserBuilder email(String email) { this.email = email; return this; }
         public UserBuilder passwordHash(String passwordHash) { this.passwordHash = passwordHash; return this; }
         public UserBuilder role(Role role) { this.role = role; return this; }
         public UserBuilder active(boolean active) { this.active = active; return this; }
 
         public User build() {
-            return new User(id, email, passwordHash, role, active);
+            return new User(null, email, passwordHash, role, active);
         }
     }
+
 }

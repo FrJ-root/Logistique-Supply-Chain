@@ -61,16 +61,19 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         try {
-            User user = userService.registerClient(request.getEmail(), request.getPassword());
-            UserDTO dto = UserDTO.builder()
-                    .id(user.getId())
-                    .email(user.getEmail())
-                    .role(user.getRole())
-                    .active(user.isActive())
-                    .build();
+            User user = userService.registerClient(
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getName(),
+                    request.getContactInfo()
+            );
 
-            return ResponseEntity.ok(dto);
-
+            return ResponseEntity.ok(Map.of(
+                    "id", user.getId(),
+                    "email", user.getEmail(),
+                    "role", user.getRole(),
+                    "active", user.isActive()
+            ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {

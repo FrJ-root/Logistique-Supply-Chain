@@ -25,7 +25,8 @@ public class SalesOrderLine {
     @ManyToOne(optional = false)
     private SalesOrder salesOrder;
 
-    // Custom Builder
+    private Integer backorderedQty = 0;
+
     public static SalesOrderLineBuilder builder() { return new SalesOrderLineBuilder(); }
 
     public static class SalesOrderLineBuilder {
@@ -35,6 +36,12 @@ public class SalesOrderLine {
         private BigDecimal unitPrice;
         private SalesOrder salesOrder;
 
+        public void setBackorderedQty(Integer backorderedQty) {
+            this.backorderedQty = backorderedQty;
+        }
+
+        private Integer backorderedQty = 0;
+
         public SalesOrderLineBuilder id(Long id) { this.id = id; return this; }
         public SalesOrderLineBuilder product(Product product) { this.product = product; return this; }
         public SalesOrderLineBuilder quantity(Integer quantity) { this.quantity = quantity; return this; }
@@ -42,7 +49,7 @@ public class SalesOrderLine {
         public SalesOrderLineBuilder salesOrder(SalesOrder salesOrder) { this.salesOrder = salesOrder; return this; }
 
         public SalesOrderLine build() {
-            return new SalesOrderLine(id, product, quantity, unitPrice, salesOrder);
+            return new SalesOrderLine(id, product, quantity, unitPrice, salesOrder, backorderedQty);
         }
     }
 }

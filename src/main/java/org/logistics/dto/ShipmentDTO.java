@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 public class ShipmentDTO {
     private Long id;
     private String trackingNumber;
-    private String status; // ShipmentStatus
+    private String status;
     private LocalDateTime plannedDate;
     private LocalDateTime shippedDate;
     private LocalDateTime deliveredDate;

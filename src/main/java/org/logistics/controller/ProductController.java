@@ -27,6 +27,43 @@ public class ProductController {
         return role != null && role.toString().equals(Role.ADMIN.name());
     }
 
+    private boolean requireClient(HttpSession session) {
+        Object role = session.getAttribute("role");
+        return role != null && role.toString().equals("CLIENT");
+    }
+
+    @GetMapping("/sku/{sku}")
+    public ResponseEntity<?> getBySku(@PathVariable String sku, HttpSession session) {
+        // Check if the user is a CLIENT
+        if (!requireClient(session)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Accès client requis"));
+        }
+
+        return service.findBySku(sku)
+                .map(dto -> {
+                    // If product is inactive
+                    if (!dto.isActive()) {
+                        return ResponseEntity.ok(Map.of(
+                                "sku", dto.getSku(),
+                                "name", dto.getName(),
+                                "category", dto.getCategory(),
+                                "active", false,
+                                "availability", "Indisponible à la vente"
+                        ));
+                    }
+
+                    // Active product
+                    return ResponseEntity.ok(Map.of(
+                            "sku", dto.getSku(),
+                            "name", dto.getName(),
+                            "category", dto.getCategory(),
+                            "active", true,
+                            "availability", "Disponible"
+                    ));
+                })
+                .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Produit non trouvé")));
+    }
+
     @PostMapping
     public ResponseEntity<?> create(@RequestBody ProductDTO dto, HttpSession session) {
         if (!requireAdmin(session))

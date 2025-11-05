@@ -13,8 +13,7 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface PurchaseOrderMapper {
 
-    PurchaseOrderMapper INSTANCE = Mappers.getMapper(PurchaseOrderMapper.class);
-
+    @Mapping(source = "supplier.id", target = "supplierId")
     @Mapping(source = "lines", target = "lines")
     PurchaseOrderDTO toDTO(PurchaseOrder po);
 

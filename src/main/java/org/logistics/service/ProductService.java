@@ -83,4 +83,16 @@ public class ProductService {
             return repo.save(product);
         });
     }
+
+    public Optional<ProductDTO> findBySku(String sku) {
+        return repo.findBySku(sku)
+                .map(p -> ProductDTO.builder()
+                        .id(p.getId())
+                        .sku(p.getSku())
+                        .name(p.getName())
+                        .category(p.getCategory())
+                        .active(p.isActive())
+                        .build());
+    }
+
 }

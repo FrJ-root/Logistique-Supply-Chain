@@ -11,7 +11,7 @@ import java.util.List;
 public class SalesOrderDTO {
     private Long id;
     private Long clientId;
-    private String status; // OrderStatus
+    private String status;
     private LocalDateTime createdAt;
     private LocalDateTime reservedAt;
     private LocalDateTime shippedAt;

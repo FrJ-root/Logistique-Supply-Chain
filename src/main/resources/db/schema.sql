@@ -1,9 +1,9 @@
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
-    email VARCHAR(120) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(50),
-    active BOOLEAN DEFAULT TRUE
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    active BOOLEAN NOT NULL
 );
 
 CREATE TABLE clients(
@@ -11,6 +11,9 @@ CREATE TABLE clients(
     name VARCHAR(255) NOT NULL,
     contact_info VARCHAR(255)
 );
+
+ALTER TABLE clients
+ADD COLUMN user_id BIGINT UNIQUE REFERENCES users(id);
 
 CREATE TABLE suppliers(
     id SERIAL PRIMARY KEY,
@@ -67,6 +70,9 @@ CREATE TABLE shipments(
     carrier_id INT REFERENCES carriers(id)
 );
 
+ALTER TABLE shipments
+ADD COLUMN sales_order_id INT REFERENCES sales_orders(id);
+
 CREATE TABLE sales_orders(
     id SERIAL PRIMARY KEY,
     client_id INT REFERENCES clients(id),
@@ -93,7 +99,7 @@ CREATE TABLE purchase_orders(
     expected_delivery TIMESTAMP
 );
 
-CREATE TABLE purchase_order_lines(
+CREATE TABLE purchase_order_line(
     id SERIAL PRIMARY KEY,
     purchase_order_id INT REFERENCES purchase_orders(id),
     product_id INT REFERENCES products(id),

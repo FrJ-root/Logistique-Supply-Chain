@@ -32,7 +32,6 @@ public class SalesOrder {
     @OneToMany(mappedBy = "salesOrder")
     private List<SalesOrderLine> lines;
 
-    // Custom Builder
     public static SalesOrderBuilder builder() { return new SalesOrderBuilder(); }
 
     public static class SalesOrderBuilder {

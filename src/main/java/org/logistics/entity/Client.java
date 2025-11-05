@@ -6,8 +6,7 @@ import lombok.*;
 @Entity
 @Table(name = "clients")
 @Getter @Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor @AllArgsConstructor
 public class Client {
 
     @Id
@@ -19,6 +18,10 @@ public class Client {
 
     private String contactInfo;
 
+    @OneToOne
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    private User user;
+
     public static ClientBuilder builder() {
         return new ClientBuilder();
     }
@@ -27,13 +30,19 @@ public class Client {
         private Long id;
         private String name;
         private String contactInfo;
+        private User user;
+
 
         public ClientBuilder id(Long id) { this.id = id; return this; }
         public ClientBuilder name(String name) { this.name = name; return this; }
         public ClientBuilder contactInfo(String contactInfo) { this.contactInfo = contactInfo; return this; }
+        public ClientBuilder user(User user) {
+            this.user = user;
+            return this;
+        }
 
         public Client build() {
-            return new Client(id, name, contactInfo);
+            return new Client(id, name, contactInfo, user);
         }
     }
 }

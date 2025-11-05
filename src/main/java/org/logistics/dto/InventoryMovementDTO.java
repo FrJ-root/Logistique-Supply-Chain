@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Builder
 public class InventoryMovementDTO {
     private Long id;
-    private String type; // MovementType as String
+    private String type;
     private Integer quantity;
     private LocalDateTime occurredAt;
     private String referenceDocument;

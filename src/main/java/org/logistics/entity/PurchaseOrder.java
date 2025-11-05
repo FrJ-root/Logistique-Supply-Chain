@@ -30,7 +30,6 @@ public class PurchaseOrder {
     @OneToMany(mappedBy = "purchaseOrder")
     private List<PurchaseOrderLine> lines;
 
-    // Custom Builder
     public static PurchaseOrderBuilder builder() { return new PurchaseOrderBuilder(); }
 
     public static class PurchaseOrderBuilder {

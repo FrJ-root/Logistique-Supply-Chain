@@ -1,0 +1,241 @@
+package org.logistics.service;
+
+import lombok.RequiredArgsConstructor;
+import org.logistics.dto.SalesOrderDTO;
+import org.logistics.dto.SalesOrderLineDTO;
+import org.logistics.entity.*;
+import org.logistics.enums.OrderStatus;
+import org.logistics.repository.ClientRepository;
+import org.logistics.repository.InventoryRepository;
+import org.logistics.repository.ProductRepository;
+import org.logistics.repository.SalesOrderRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class SalesOrderService {
+
+    private final SalesOrderRepository salesOrderRepository;
+    private final ProductRepository productRepository;
+    private final ClientRepository clientRepository;
+    private final InventoryRepository inventoryRepository;
+
+    private static final int CUT_OFF_HOUR = 15;
+    private static final int RESERVATION_TTL_HOURS = 24;
+
+    @Transactional
+    public SalesOrder cancelOrder(Long orderId, boolean isAdmin) {
+        if (!isAdmin) {
+            throw new RuntimeException("Only admins can cancel orders");
+        }
+
+        SalesOrder order = salesOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        switch (order.getStatus()) {
+            case CREATED:
+                order.setStatus(OrderStatus.CANCELED);
+                break;
+
+            case RESERVED:
+                for (SalesOrderLine line : order.getLines()) {
+                    List<Inventory> inventories = inventoryRepository.findByProduct(line.getProduct());
+                    for (Inventory inventory : inventories) {
+                        int newReserved = inventory.getQtyReserved() - line.getQuantity();
+                        inventory.setQtyReserved(Math.max(newReserved, 0));
+                        inventoryRepository.save(inventory);
+                    }
+                }
+                order.setStatus(OrderStatus.CANCELED);
+                break;
+
+            case SHIPPED:
+            case DELIVERED:
+                throw new RuntimeException("Cannot cancel a shipped or delivered order, use return process");
+        }
+
+        return salesOrderRepository.save(order);
+    }
+
+    @Transactional
+    public SalesOrder createOrder(SalesOrderDTO dto, Long clientId) {
+        if (dto.getLines() == null || dto.getLines().isEmpty()) {
+            throw new RuntimeException("La commande doit contenir au moins une ligne.");
+        }
+
+        // Fetch client
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new RuntimeException("Client non trouvé"));
+
+        // Initialize order
+        SalesOrder order = SalesOrder.builder()
+                .client(client)
+                .status(OrderStatus.CREATED)
+                .createdAt(java.time.LocalDateTime.now())
+                .lines(new java.util.ArrayList<>())
+                .build();
+
+        for (SalesOrderLineDTO lineDTO : dto.getLines()) {
+            Product product = productRepository.findById(lineDTO.getProductId())
+                    .orElseThrow(() -> new RuntimeException("Produit inexistant : " + lineDTO.getProductId()));
+
+            if (!product.isActive()) {
+                throw new RuntimeException("Produit inactif : " + product.getName());
+            }
+
+            // Create line
+            SalesOrderLine line = new SalesOrderLine();
+            line.setProduct(product);
+            line.setQuantity(lineDTO.getQuantity());
+            line.setUnitPrice(lineDTO.getUnitPrice());
+            line.setSalesOrder(order);
+
+            order.getLines().add(line);
+        }
+
+        // Save order and lines (cascade if configured)
+        return salesOrderRepository.save(order);
+    }
+
+    @Transactional
+    public SalesOrder reserveOrder(Long orderId, boolean allowPartial) {
+        SalesOrder order = salesOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Commande non trouvée"));
+
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new RuntimeException("La commande doit être en statut CREATED pour être réservée");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime plannedReservationTime = now;
+        if (now.toLocalTime().isAfter(LocalTime.of(CUT_OFF_HOUR, 0))) {
+            plannedReservationTime = nextWorkingDay(now).withHour(9).withMinute(0); // plan next working day 9h
+            order.setReservedAt(plannedReservationTime); // store planned reservation time
+        } else {
+            order.setReservedAt(now);
+        }
+
+        boolean allAvailable = true;
+        for (SalesOrderLine line : order.getLines()) {
+            List<Inventory> inventories = inventoryRepository.findByProduct(line.getProduct());
+            int totalAvailable = inventories.stream().mapToInt(inv -> inv.getQtyOnHand() - inv.getQtyReserved()).sum();
+            if (totalAvailable < line.getQuantity()) {
+                allAvailable = false;
+            }
+        }
+
+        if (!allAvailable) {
+            throw new RuntimeException("Stock insuffisant pour toutes les lignes de la commande");
+        }
+
+        for (SalesOrderLine line : order.getLines()) {
+            List<Inventory> inventories = inventoryRepository.findByProduct(line.getProduct());
+            int qtyToReserve = line.getQuantity();
+            for (Inventory inv : inventories) {
+                int available = inv.getQtyOnHand() - inv.getQtyReserved();
+                int reservedNow = Math.min(available, qtyToReserve);
+                inv.setQtyReserved(inv.getQtyReserved() + reservedNow);
+                inventoryRepository.save(inv);
+                qtyToReserve -= reservedNow;
+                if (qtyToReserve <= 0) break;
+            }
+        }
+
+        order.setStatus(OrderStatus.RESERVED);
+        order.setReservedAt(now);
+        return salesOrderRepository.save(order);
+    }
+
+    @Transactional
+    public void releaseExpiredReservations() {
+        LocalDateTime expirationThreshold = LocalDateTime.now().minusHours(RESERVATION_TTL_HOURS);
+        List<SalesOrder> reservedOrders = salesOrderRepository.findAll().stream()
+                .filter(o -> o.getStatus() == OrderStatus.RESERVED)
+                .toList();
+
+        for (SalesOrder order : reservedOrders) {
+            if (order.getReservedAt() != null && order.getReservedAt().isBefore(expirationThreshold)) {
+                releaseStock(order);
+                order.setStatus(OrderStatus.CREATED);
+                order.setReservedAt(null);
+                salesOrderRepository.save(order);
+            }
+        }
+    }
+
+    private void releaseStock(SalesOrder order) {
+        for (SalesOrderLine line : order.getLines()) {
+            List<Inventory> inventories = inventoryRepository.findByProduct(line.getProduct());
+            for (Inventory inv : inventories) {
+                inv.setQtyReserved(Math.max(inv.getQtyReserved() - line.getQuantity(), 0));
+                inventoryRepository.save(inv);
+            }
+        }
+    }
+
+    private LocalDateTime nextWorkingDay(LocalDateTime dateTime) {
+        LocalDateTime nextDay = dateTime.plusDays(1);
+        while (nextDay.getDayOfWeek().getValue() >= 6) { // 6=Saturday, 7=Sunday
+            nextDay = nextDay.plusDays(1);
+        }
+        return nextDay;
+    }
+
+    @Transactional
+    public SalesOrder reserveOrderWarehouse(Long orderId, boolean allowPartial) {
+        SalesOrder order = salesOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Commande non trouvée"));
+
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new RuntimeException("Seules les commandes CREATED peuvent être réservées");
+        }
+
+        boolean fullyCovered = true;
+
+        for (SalesOrderLine line : order.getLines()) {
+            List<Inventory> inventories = inventoryRepository.findByProduct(line.getProduct());
+            int available = inventories.stream()
+                    .mapToInt(inv -> inv.getQtyOnHand() - inv.getQtyReserved())
+                    .sum();
+
+            if (available < line.getQuantity()) {
+                fullyCovered = false;
+            }
+        }
+
+        if (!fullyCovered && !allowPartial) {
+            throw new RuntimeException("Stock insuffisant, réservation partielle interdite");
+        }
+
+        for (SalesOrderLine line : order.getLines()) {
+            int qtyToReserve = line.getQuantity();
+            List<Inventory> inventories = inventoryRepository.findByProduct(line.getProduct());
+
+            for (Inventory inv : inventories) {
+                int available = inv.getQtyOnHand() - inv.getQtyReserved();
+                int reservedNow = Math.min(available, qtyToReserve);
+
+                inv.setQtyReserved(inv.getQtyReserved() + reservedNow);
+                inventoryRepository.save(inv);
+
+                qtyToReserve -= reservedNow;
+                if (qtyToReserve <= 0) break;
+            }
+
+            if (qtyToReserve > 0) {
+                line.setBackorderedQty(qtyToReserve);
+            }
+        }
+
+        order.setStatus(fullyCovered ? OrderStatus.RESERVED : OrderStatus.CREATED);
+        order.setReservedAt(LocalDateTime.now());
+
+        return salesOrderRepository.save(order);
+    }
+
+}

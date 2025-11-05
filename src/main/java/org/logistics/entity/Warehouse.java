@@ -22,7 +22,6 @@ public class Warehouse {
 
     private boolean active = true;
 
-    // Custom Builder
     public static WarehouseBuilder builder() { return new WarehouseBuilder(); }
 
     public static class WarehouseBuilder {

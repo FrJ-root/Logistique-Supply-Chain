@@ -26,10 +26,14 @@ public class Shipment {
     private LocalDateTime shippedDate;
     private LocalDateTime deliveredDate;
 
-    @ManyToOne(optional = false)
+    @ManyToOne
+    @JoinColumn(name = "sales_order_id")
+    private SalesOrder salesOrder;
+
+    @ManyToOne
+    @JoinColumn(name = "carrier_id")
     private Carrier carrier;
 
-    // Custom Builder
     public static ShipmentBuilder builder() { return new ShipmentBuilder(); }
 
     public static class ShipmentBuilder {
@@ -39,8 +43,13 @@ public class Shipment {
         private LocalDateTime plannedDate;
         private LocalDateTime shippedDate;
         private LocalDateTime deliveredDate;
+        private SalesOrder salesOrder;
         private Carrier carrier;
 
+        public ShipmentBuilder salesOrder(SalesOrder salesOrder) {
+            this.salesOrder = salesOrder;
+            return this;
+        }
         public ShipmentBuilder id(Long id) { this.id = id; return this; }
         public ShipmentBuilder trackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; return this; }
         public ShipmentBuilder status(ShipmentStatus status) { this.status = status; return this; }
@@ -50,7 +59,7 @@ public class Shipment {
         public ShipmentBuilder carrier(Carrier carrier) { this.carrier = carrier; return this; }
 
         public Shipment build() {
-            return new Shipment(id, trackingNumber, status, plannedDate, shippedDate, deliveredDate, carrier);
+            return new Shipment(id, trackingNumber, status, plannedDate, shippedDate, deliveredDate, salesOrder, carrier);
         }
     }
 }

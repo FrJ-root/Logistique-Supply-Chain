@@ -1,8 +1,11 @@
 package org.logistics.service;
 
+import jakarta.transaction.Transactional;
 import org.logistics.dto.UserDTO;
+import org.logistics.entity.Client;
 import org.logistics.entity.User;
 import org.logistics.enums.Role;
+import org.logistics.repository.ClientRepository;
 import org.logistics.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
@@ -11,9 +14,11 @@ import java.util.Optional;
 @Service
 public class UserService {
     private final UserRepository userRepository;
+    private final ClientRepository clientRepository;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, ClientRepository clientRepository) {
         this.userRepository = userRepository;
+        this.clientRepository = clientRepository;
     }
 
     public Optional<User> login(String email, String password) {
@@ -36,7 +41,8 @@ public class UserService {
                 });
     }
 
-    public User registerClient(String email, String password) {
+    @Transactional
+    public User registerClient(String email, String password, String name, String contactInfo) {
         if (userRepository.findByEmail(email).isPresent()) {
             throw new IllegalArgumentException("Email already in use");
         }
@@ -47,8 +53,16 @@ public class UserService {
                 .role(Role.CLIENT)
                 .active(true)
                 .build();
+        user = userRepository.save(user);
 
-        return userRepository.save(user);
+        Client client = Client.builder()
+                .name(name)
+                .contactInfo(contactInfo)
+                .build();
+        client.setUser(user);
+        clientRepository.save(client);
+
+        return user;
     }
 
 }
