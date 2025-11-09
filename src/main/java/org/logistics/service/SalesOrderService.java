@@ -4,11 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.logistics.dto.SalesOrderDTO;
 import org.logistics.dto.SalesOrderLineDTO;
 import org.logistics.entity.*;
+import org.logistics.enums.MovementType;
 import org.logistics.enums.OrderStatus;
-import org.logistics.repository.ClientRepository;
-import org.logistics.repository.InventoryRepository;
-import org.logistics.repository.ProductRepository;
-import org.logistics.repository.SalesOrderRepository;
+import org.logistics.enums.ShipmentStatus;
+import org.logistics.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +23,8 @@ public class SalesOrderService {
     private final ProductRepository productRepository;
     private final ClientRepository clientRepository;
     private final InventoryRepository inventoryRepository;
+    private final ShipmentRepository shipmentRepository;
+    private final InventoryMovementRepository movementRepository;
 
     private static final int CUT_OFF_HOUR = 15;
     private static final int RESERVATION_TTL_HOURS = 24;
@@ -237,5 +238,75 @@ public class SalesOrderService {
 
         return salesOrderRepository.save(order);
     }
+
+    @Transactional
+    public SalesOrder shipOrder(Long orderId, Long shipmentId) {
+        SalesOrder order = salesOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Commande non trouvée"));
+
+        if (order.getStatus() != OrderStatus.RESERVED) {
+            throw new RuntimeException("La commande doit être RESERVED pour être expédiée");
+        }
+
+        Shipment shipment = shipmentRepository.findById(shipmentId)
+                .orElseThrow(() -> new RuntimeException("Expédition non trouvée"));
+
+        shipment.setStatus(ShipmentStatus.IN_TRANSIT);
+        shipment.setShippedDate(java.time.LocalDateTime.now());
+        shipmentRepository.save(shipment);
+
+        for (SalesOrderLine line : order.getLines()) {
+            List<Inventory> inventories = inventoryRepository.findByProduct(line.getProduct());
+            int qtyToShip = line.getQuantity();
+
+            for (Inventory inv : inventories) {
+                int availableReserved = inv.getQtyReserved();
+                int toDecrease = Math.min(availableReserved, qtyToShip);
+                if (toDecrease > 0) {
+                    inv.setQtyReserved(inv.getQtyReserved() - toDecrease);
+                    inv.setQtyOnHand(inv.getQtyOnHand() - toDecrease);
+                    inventoryRepository.save(inv);
+
+                    InventoryMovement movement = InventoryMovement.builder()
+                            .type(MovementType.OUTBOUND)
+                            .quantity(toDecrease)
+                            .occurredAt(java.time.LocalDateTime.now())
+                            .referenceDocument("Shipment-" + shipment.getId())
+                            .description("Shipment of order " + order.getId())
+                            .warehouse(inv.getWarehouse())
+                            .product(inv.getProduct())
+                            .build();
+                    movementRepository.save(movement);
+
+                    qtyToShip -= toDecrease;
+                    if (qtyToShip <= 0) break;
+                }
+            }
+
+            if (qtyToShip > 0) {
+                throw new RuntimeException("Stock insuffisant pour expédier la ligne produit " + line.getProduct().getName());
+            }
+        }
+
+        order.setStatus(OrderStatus.SHIPPED);
+        return salesOrderRepository.save(order);
+    }
+
+    @Transactional
+    public SalesOrder deliverOrder(Long orderId, Long shipmentId) {
+        SalesOrder order = salesOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Commande non trouvée"));
+
+        Shipment shipment = shipmentRepository.findById(shipmentId)
+                .orElseThrow(() -> new RuntimeException("Expédition non trouvée"));
+
+        shipment.setStatus(ShipmentStatus.DELIVERED);
+        shipment.setDeliveredDate(java.time.LocalDateTime.now());
+        shipmentRepository.save(shipment);
+
+        order.setStatus(OrderStatus.DELIVERED);
+        return salesOrderRepository.save(order);
+    }
+
 
 }
