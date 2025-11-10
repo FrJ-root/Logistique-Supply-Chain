@@ -27,7 +27,6 @@ public class Inventory {
     private Integer qtyOnHand = 0;
     private Integer qtyReserved = 0;
 
-    // Custom Builder
     public static InventoryBuilder builder() { return new InventoryBuilder(); }
 
     public static class InventoryBuilder {
