@@ -72,4 +72,25 @@ public class ShipmentController {
         }
     }
 
+    private boolean requireWarehouseManager(HttpSession session) {
+        Object role = session.getAttribute("role");
+        return role != null && role.toString().equals("WAREHOUSE_MANAGER");
+    }
+
+    @PostMapping("/{id}/ship")
+    public ResponseEntity<?> markAsShipped(@PathVariable Long id, HttpSession session) {
+        if (!requireWarehouseManager(session)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Accès gestionnaire requis"));
+        }
+        return ResponseEntity.ok(shipmentService.updateStatus(id, ShipmentStatus.IN_TRANSIT));
+    }
+
+    @PostMapping("/{id}/deliver")
+    public ResponseEntity<?> markAsDelivered(@PathVariable Long id, HttpSession session) {
+        if (!requireWarehouseManager(session)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Accès gestionnaire requis"));
+        }
+        return ResponseEntity.ok(shipmentService.updateStatus(id, ShipmentStatus.DELIVERED));
+    }
+
 }

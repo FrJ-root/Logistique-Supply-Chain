@@ -1,13 +1,14 @@
 package org.logistics.controller;
 
+import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.NotBlank;
+import org.springframework.http.ResponseEntity;
+import org.logistics.service.ProductService;
+import org.logistics.mapper.ProductMapper;
 import jakarta.servlet.http.HttpSession;
 import org.logistics.dto.ProductDTO;
 import org.logistics.enums.Role;
-import org.logistics.mapper.ProductMapper;
-import org.logistics.service.ProductService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
 
 @RestController
@@ -124,6 +125,17 @@ public class ProductController {
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    //    --> mise en situation
+
+    @PatchMapping("/{sku}/deactivate")
+    public ResponseEntity<String> deactivateProduct(
+            @PathVariable @NotBlank String sku,
+            HttpServletRequest request) {
+
+        service.deactivateProduct(sku);
+        return ResponseEntity.ok("Deactivation succ: " + sku);
     }
 
 }

@@ -27,6 +27,9 @@ public class InventoryMovement {
 
     private String referenceDocument;
 
+    @ManyToOne(optional = false)
+    private Inventory inventory;
+
     private String description;
 
     @ManyToOne(optional = false)
@@ -43,6 +46,7 @@ public class InventoryMovement {
         private LocalDateTime occurredAt;
         private String referenceDocument;
         private String description;
+        private Inventory inventory;
         private Warehouse warehouse;
         private Product product;
 
@@ -51,11 +55,12 @@ public class InventoryMovement {
         public InventoryMovementBuilder occurredAt(LocalDateTime occurredAt) { this.occurredAt = occurredAt; return this; }
         public InventoryMovementBuilder referenceDocument(String referenceDocument) { this.referenceDocument = referenceDocument; return this; }
         public InventoryMovementBuilder description(String description) { this.description = description; return this; }
+        public InventoryMovementBuilder inventory(Inventory inventory) { this.inventory = inventory; return this; }
         public InventoryMovementBuilder warehouse(Warehouse warehouse) { this.warehouse = warehouse; return this; }
         public InventoryMovementBuilder product(Product product) { this.product = product; return this; }
 
         public InventoryMovement build() {
-            return new InventoryMovement(null, type, quantity, occurredAt, referenceDocument, description, warehouse, product);
+            return new InventoryMovement(null, type, quantity, occurredAt, referenceDocument, inventory, description, warehouse, product);
         }
     }
 

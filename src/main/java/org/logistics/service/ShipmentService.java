@@ -2,24 +2,24 @@ package org.logistics.service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.logistics.entity.Carrier;
-import org.logistics.entity.SalesOrder;
-import org.logistics.entity.Shipment;
+import org.logistics.entity.*;
+import org.logistics.enums.MovementType;
 import org.logistics.enums.OrderStatus;
 import org.logistics.enums.ShipmentStatus;
-import org.logistics.repository.CarrierRepository;
-import org.logistics.repository.SalesOrderRepository;
-import org.logistics.repository.ShipmentRepository;
+import org.logistics.repository.*;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class ShipmentService {
 
+    private final InventoryMovementRepository inventoryMovementRepository;
+    private final InventoryRepository inventoryRepository;
     private final ShipmentRepository shipmentRepository;
     private final SalesOrderRepository salesOrderRepository;
     private final CarrierRepository carrierRepository;
@@ -62,7 +62,7 @@ public class ShipmentService {
         return shipmentRepository.save(shipment);
     }
 
-    private String generateTrackingNumber(Long orderId) {
+    String generateTrackingNumber(Long orderId) {
         return "TRK-" + orderId + "-" + System.currentTimeMillis();
     }
 
@@ -88,18 +88,76 @@ public class ShipmentService {
                 .orElseThrow(() -> new RuntimeException("Aucune expédition associée à cette commande"));
     }
 
+    @Transactional
     public Shipment updateStatus(Long shipmentId, ShipmentStatus newStatus) {
+
         Shipment shipment = shipmentRepository.findById(shipmentId)
                 .orElseThrow(() -> new RuntimeException("Expédition non trouvée"));
 
-        shipment.setStatus(newStatus);
+        SalesOrder order = shipment.getSalesOrder();
 
-        if (newStatus == ShipmentStatus.IN_TRANSIT) {
-            shipment.setShippedDate(java.time.LocalDateTime.now());
-        } else if (newStatus == ShipmentStatus.DELIVERED) {
-            shipment.setDeliveredDate(java.time.LocalDateTime.now());
+        switch (newStatus) {
+
+            case IN_TRANSIT:
+                if (order.getStatus() != OrderStatus.RESERVED) {
+                    throw new RuntimeException("La commande doit être RESERVED pour commencer l'expédition");
+                }
+
+                // Consume inventory reservation
+                for (SalesOrderLine line : order.getLines()) {
+                    int qty = line.getQuantity();
+
+                    // Fetch inventories holding reservations of the product
+                    List<Inventory> inventories = inventoryRepository.findByProduct(line.getProduct());
+
+                    for (Inventory inv : inventories) {
+
+                        int reservedToConsume = Math.min(inv.getQtyReserved(), qty);
+
+                        inv.setQtyReserved(inv.getQtyReserved() - reservedToConsume);
+                        inv.setQtyOnHand(inv.getQtyOnHand() - reservedToConsume);
+
+                        // Historize outbound movement
+                        inventoryMovementRepository.save(
+                                InventoryMovement.builder()
+                                        .type(MovementType.OUTBOUND)
+                                        .quantity(reservedToConsume)
+                                        .occurredAt(LocalDateTime.now())
+                                        .referenceDocument(shipment.getTrackingNumber())
+                                        .description("Shipment dispatch")
+                                        .warehouse(inv.getWarehouse())
+                                        .product(line.getProduct())
+                                        .inventory(inv)
+                                        .build()
+                        );
+
+                        qty -= reservedToConsume;
+                        inventoryRepository.save(inv);
+
+                        if (qty <= 0) break;
+                    }
+                }
+
+                order.setStatus(OrderStatus.SHIPPED);
+                shipment.setShippedDate(LocalDateTime.now());
+                break;
+
+            case DELIVERED:
+                if (order.getStatus() != OrderStatus.SHIPPED) {
+                    throw new RuntimeException("La commande doit être SHIPPED avant d'être livrée");
+                }
+
+                order.setStatus(OrderStatus.DELIVERED);
+                shipment.setDeliveredDate(LocalDateTime.now());
+                break;
+
+            default:
+                throw new RuntimeException("Transition non supportée");
         }
 
+        shipment.setStatus(newStatus);
+
+        salesOrderRepository.save(order);
         return shipmentRepository.save(shipment);
     }
 

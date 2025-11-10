@@ -1,9 +1,15 @@
 package org.logistics.service;
 
 import org.logistics.dto.ProductDTO;
+import org.logistics.entity.Inventory;
 import org.logistics.entity.Product;
-import org.logistics.repository.ProductRepository;
+import org.logistics.enums.OrderStatus;
+import org.logistics.repository.InventoryMovementRepository;
+import org.logistics.exception.ResourceNotFoundException;
 import org.logistics.repository.SalesOrderLineRepository;
+import org.logistics.repository.InventoryRepository;
+import org.logistics.repository.ProductRepository;
+import org.logistics.exception.BusinessException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,6 +21,7 @@ public class ProductService {
 
     private final ProductRepository repo;
     private final SalesOrderLineRepository orderLineRepo;
+    private InventoryRepository inventoryRepository;
 
     public ProductService(ProductRepository repo, SalesOrderLineRepository orderLineRepo) {
         this.repo = repo;
@@ -93,6 +100,35 @@ public class ProductService {
                         .category(p.getCategory())
                         .active(p.isActive())
                         .build());
+    }
+
+    //   -> mise en situation
+
+    public void deactivateProduct(String sku) {
+        Product product = repo.findBySku(sku).orElseThrow(() -> new ResourceNotFoundException("Product not found: " + sku));
+
+        if (!product.isActive()) {
+            throw new BusinessException("Product deja inactive");
+        }
+
+        long activeOrdersCount = orderLineRepo.countByProduct_SkuAndOrder_StatusIn(sku, List.of(OrderStatus.CREATED, OrderStatus.RESERVED));
+
+        if (activeOrdersCount > 0) {
+            throw new BusinessException("Ooops! Cannot deactivate cs product is associated with active orders");
+        }
+
+        List<Inventory> inventoryList = inventoryRepository.findByProduct_Sku(sku);
+
+        int totalReserved = inventoryList.stream()
+                .mapToInt(Inventory::getQtyReserved)
+                .sum();
+
+        if (totalReserved > 0) {
+            throw new BusinessException("Oops! Cannot deactivate cs reserved stock exists");
+        }
+
+        product.setActive(false);
+        repo.save(product);
     }
 
 }

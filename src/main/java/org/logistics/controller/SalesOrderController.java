@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.logistics.dto.SalesOrderDTO;
 import org.logistics.entity.SalesOrder;
+import org.logistics.repository.SalesOrderRepository;
 import org.logistics.service.SalesOrderService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,11 +17,12 @@ import java.util.Map;
 public class SalesOrderController {
 
     private final SalesOrderService salesOrderService;
+    private final SalesOrderRepository salesOrderRepository;
 
     @PostMapping("/{id}/cancel")
     public ResponseEntity<?> cancelOrder(@PathVariable Long id) {
         try {
-            boolean isAdmin = true; // simulate admin, replace with actual auth check
+            boolean isAdmin = true;
             SalesOrder canceledOrder = salesOrderService.cancelOrder(id, isAdmin);
             return ResponseEntity.ok(canceledOrder);
         } catch (RuntimeException e) {
@@ -32,7 +34,6 @@ public class SalesOrderController {
 
     @PostMapping
     public ResponseEntity<?> createOrder(@RequestBody SalesOrderDTO dto, HttpSession session) {
-        // Check client role
         Object role = session.getAttribute("role");
         Object clientId = session.getAttribute("userId");
         if (role == null || !role.toString().equals("CLIENT")) {
@@ -48,7 +49,9 @@ public class SalesOrderController {
     }
 
     @PostMapping("/{id}/reserve")
-    public ResponseEntity<?> reserveOrder(@PathVariable Long id, @RequestParam(defaultValue = "false") boolean allowPartial, HttpSession session) {
+    public ResponseEntity<?> reserveOrder(@PathVariable Long id,
+                                          @RequestParam(defaultValue = "false") boolean allowPartial,
+                                          HttpSession session) {
 
         Object role = session.getAttribute("role");
         Object clientId = session.getAttribute("userId");
@@ -116,6 +119,34 @@ public class SalesOrderController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getOrder(@PathVariable Long id, HttpSession session) {
+        Object roleObj = session.getAttribute("role");
+        Object userIdObj = session.getAttribute("userId");
+
+        if (roleObj == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Non connecté"));
+        }
+
+        String role = roleObj.toString();
+        Long userId = (userIdObj instanceof Number) ? ((Number) userIdObj).longValue() : null;
+
+        SalesOrder order = salesOrderService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Commande non trouvée"));
+
+        if ("CLIENT".equals(role)) {
+            if (!order.getClient().getId().equals(userId)) {
+                return ResponseEntity.status(403)
+                        .body(Map.of("error", "Accès interdit : cette commande n'appartient pas au client"));
+            }
+        } else if ("WAREHOUSE_MANAGER".equals(role)) {
+        } else {
+            return ResponseEntity.status(403).body(Map.of("error", "Accès non autorisé"));
+        }
+
+        return ResponseEntity.ok(order);
     }
 
 }

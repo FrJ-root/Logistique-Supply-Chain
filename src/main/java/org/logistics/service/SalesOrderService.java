@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -308,5 +309,9 @@ public class SalesOrderService {
         return salesOrderRepository.save(order);
     }
 
+    @Transactional(readOnly = true)
+    public Optional<SalesOrder> findById(Long id) {
+        return salesOrderRepository.findById(id);
+    }
 
 }

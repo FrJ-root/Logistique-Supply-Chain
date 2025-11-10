@@ -9,10 +9,16 @@ import java.time.LocalDateTime;
 @Builder
 public class ShipmentDTO {
     private Long id;
+
     private String trackingNumber;
+
     private String status;
+
     private LocalDateTime plannedDate;
+
     private LocalDateTime shippedDate;
+
     private LocalDateTime deliveredDate;
+
     private Long carrierId;
 }
