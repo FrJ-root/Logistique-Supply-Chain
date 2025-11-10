@@ -1,9 +1,5 @@
 package org.logistics.service;
 
-import org.logistics.dto.ProductDTO;
-import org.logistics.entity.Inventory;
-import org.logistics.entity.Product;
-import org.logistics.enums.OrderStatus;
 import org.logistics.repository.InventoryMovementRepository;
 import org.logistics.exception.ResourceNotFoundException;
 import org.logistics.repository.SalesOrderLineRepository;
@@ -11,9 +7,12 @@ import org.logistics.repository.InventoryRepository;
 import org.logistics.repository.ProductRepository;
 import org.logistics.exception.BusinessException;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import org.logistics.enums.OrderStatus;
+import org.logistics.entity.Inventory;
+import org.logistics.dto.ProductDTO;
+import org.logistics.entity.Product;
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 @Service
