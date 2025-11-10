@@ -34,14 +34,12 @@ public class ProductController {
 
     @GetMapping("/sku/{sku}")
     public ResponseEntity<?> getBySku(@PathVariable String sku, HttpSession session) {
-        // Check if the user is a CLIENT
         if (!requireClient(session)) {
             return ResponseEntity.status(403).body(Map.of("error", "Accès client requis"));
         }
 
         return service.findBySku(sku)
                 .map(dto -> {
-                    // If product is inactive
                     if (!dto.isActive()) {
                         return ResponseEntity.ok(Map.of(
                                 "sku", dto.getSku(),
