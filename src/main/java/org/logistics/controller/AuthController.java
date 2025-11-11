@@ -1,14 +1,13 @@
 package org.logistics.controller;
 
+import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import org.logistics.dto.RegisterRequest;
+import org.logistics.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.logistics.dto.LoginRequest;
-import org.logistics.dto.RegisterRequest;
 import org.logistics.dto.UserDTO;
 import org.logistics.entity.User;
-import org.logistics.service.UserService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
 
 @RestController

@@ -1,27 +1,25 @@
 package org.logistics.service;
 
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
-import org.logistics.entity.Carrier;
-import org.logistics.entity.SalesOrder;
-import org.logistics.entity.Shipment;
-import org.logistics.enums.OrderStatus;
-import org.logistics.enums.ShipmentStatus;
-import org.logistics.repository.CarrierRepository;
 import org.logistics.repository.SalesOrderRepository;
 import org.logistics.repository.ShipmentRepository;
+import org.logistics.repository.CarrierRepository;
 import org.springframework.stereotype.Service;
-
+import org.logistics.enums.ShipmentStatus;
+import jakarta.transaction.Transactional;
+import org.logistics.entity.SalesOrder;
+import org.logistics.enums.OrderStatus;
+import lombok.RequiredArgsConstructor;
+import org.logistics.entity.Shipment;
+import org.logistics.entity.Carrier;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class ShipmentService {
 
-    private final ShipmentRepository shipmentRepository;
     private final SalesOrderRepository salesOrderRepository;
+    private final ShipmentRepository shipmentRepository;
     private final CarrierRepository carrierRepository;
     private static final int CUT_OFF_HOUR = 15;
 

@@ -1,9 +1,8 @@
 package org.logistics.service;
 
-import org.logistics.entity.TestEntity;
 import org.logistics.repository.TestRepository;
 import org.springframework.stereotype.Service;
-
+import org.logistics.entity.TestEntity;
 import java.util.List;
 
 @Service
@@ -22,4 +21,5 @@ public class TestService {
     public List<TestEntity> findAll() {
         return repository.findAll();
     }
+
 }

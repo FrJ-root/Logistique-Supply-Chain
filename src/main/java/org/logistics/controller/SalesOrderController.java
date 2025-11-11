@@ -1,13 +1,12 @@
 package org.logistics.controller;
 
-import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
-import org.logistics.dto.SalesOrderDTO;
-import org.logistics.entity.SalesOrder;
+import org.springframework.web.bind.annotation.*;
 import org.logistics.service.SalesOrderService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
+import jakarta.servlet.http.HttpSession;
+import org.logistics.dto.SalesOrderDTO;
+import org.logistics.entity.SalesOrder;
+import lombok.RequiredArgsConstructor;
 import java.util.Map;
 
 @RestController
@@ -20,7 +19,7 @@ public class SalesOrderController {
     @PostMapping("/{id}/cancel")
     public ResponseEntity<?> cancelOrder(@PathVariable Long id) {
         try {
-            boolean isAdmin = true; // simulate admin, replace with actual auth check
+            boolean isAdmin = true;
             SalesOrder canceledOrder = salesOrderService.cancelOrder(id, isAdmin);
             return ResponseEntity.ok(canceledOrder);
         } catch (RuntimeException e) {
@@ -31,8 +30,8 @@ public class SalesOrderController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createOrder(@RequestBody SalesOrderDTO dto, HttpSession session) {
-        // Check client role
+    public ResponseEntity<?> createOrder(@RequestBody SalesOrderDTO dto,
+                                         HttpSession session) {
         Object role = session.getAttribute("role");
         Object clientId = session.getAttribute("userId");
         if (role == null || !role.toString().equals("CLIENT")) {
@@ -48,7 +47,9 @@ public class SalesOrderController {
     }
 
     @PostMapping("/{id}/reserve")
-    public ResponseEntity<?> reserveOrder(@PathVariable Long id, @RequestParam(defaultValue = "false") boolean allowPartial, HttpSession session) {
+    public ResponseEntity<?> reserveOrder(@PathVariable Long id,
+                                          @RequestParam(defaultValue = "false") boolean allowPartial,
+                                          HttpSession session) {
 
         Object role = session.getAttribute("role");
         Object clientId = session.getAttribute("userId");

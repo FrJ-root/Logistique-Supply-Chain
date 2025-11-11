@@ -1,13 +1,12 @@
 package org.logistics.service;
 
+import org.logistics.repository.SalesOrderLineRepository;
+import org.logistics.repository.ProductRepository;
+import org.springframework.stereotype.Service;
 import org.logistics.dto.ProductDTO;
 import org.logistics.entity.Product;
-import org.logistics.repository.ProductRepository;
-import org.logistics.repository.SalesOrderLineRepository;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 @Service

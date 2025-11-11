@@ -1,14 +1,13 @@
 package org.logistics.service;
 
-import jakarta.transaction.Transactional;
-import org.logistics.dto.UserDTO;
-import org.logistics.entity.Client;
-import org.logistics.entity.User;
-import org.logistics.enums.Role;
 import org.logistics.repository.ClientRepository;
 import org.logistics.repository.UserRepository;
 import org.springframework.stereotype.Service;
-
+import jakarta.transaction.Transactional;
+import org.logistics.entity.Client;
+import org.logistics.dto.UserDTO;
+import org.logistics.entity.User;
+import org.logistics.enums.Role;
 import java.util.Optional;
 
 @Service

@@ -1,11 +1,10 @@
 package org.logistics.service;
 
+import org.logistics.repository.SupplierRepository;
+import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 import org.logistics.dto.SupplierDTO;
 import org.logistics.entity.Supplier;
-import org.logistics.repository.SupplierRepository;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 
 @Service

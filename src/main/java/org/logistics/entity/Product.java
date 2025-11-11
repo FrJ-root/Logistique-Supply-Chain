@@ -29,7 +29,6 @@ public class Product {
 
     private boolean active = true;
 
-    // Custom Builder
     public static ProductBuilder builder() { return new ProductBuilder(); }
 
     public static class ProductBuilder {

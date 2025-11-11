@@ -1,30 +1,29 @@
 package org.logistics.service;
 
-import lombok.RequiredArgsConstructor;
-import org.logistics.dto.*;
-import org.logistics.entity.*;
-import org.logistics.enums.MovementType;
-import org.logistics.enums.PurchaseOrderStatus;
-import org.logistics.mapper.PurchaseOrderMapper;
-import org.logistics.repository.*;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.logistics.mapper.PurchaseOrderMapper;
+import org.logistics.enums.PurchaseOrderStatus;
+import org.springframework.stereotype.Service;
+import org.logistics.enums.MovementType;
+import lombok.RequiredArgsConstructor;
+import org.logistics.repository.*;
 import java.time.LocalDateTime;
+import org.logistics.entity.*;
+import org.logistics.dto.*;
 import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor
 public class PurchaseOrderService {
 
-    private final PurchaseOrderRepository poRepo;
-    private final PurchaseOrderLineRepository lineRepo;
-    private final SupplierRepository supplierRepo;
     private final PurchaseOrderMapper mapper;
-    private final WarehouseRepository warehouseRepo;
     private final ProductRepository productRepo;
-    private final InventoryMovementRepository movementRepo;
+    private final PurchaseOrderRepository poRepo;
+    private final SupplierRepository supplierRepo;
+    private final WarehouseRepository warehouseRepo;
     private final InventoryRepository inventoryRepo;
+    private final PurchaseOrderLineRepository lineRepo;
+    private final InventoryMovementRepository movementRepo;
 
     @Transactional
     public PurchaseOrderDTO create(PurchaseOrderDTO dto) {
@@ -45,7 +44,7 @@ public class PurchaseOrderService {
                     .orElseThrow(() -> new RuntimeException("Product not found")));
             line.setQuantity(lineDTO.getQuantity());
             line.setUnitPrice(lineDTO.getUnitPrice());
-            line.setReceivedQty(0); // ensure non-null initial value
+            line.setReceivedQty(0);
             line.setPurchaseOrder(po);
 
             lineRepo.save(line);
@@ -87,7 +86,6 @@ public class PurchaseOrderService {
         Warehouse warehouse = warehouseRepo.findById(batch.getWarehouseId())
                 .orElseThrow(() -> new RuntimeException("Warehouse not found"));
 
-        // Process each reception item
         for (PurchaseReceptionItemDTO item : batch.getItems()) {
 
             if (item.getQuantityReceived() == null || item.getQuantityReceived() <= 0) {
@@ -97,7 +95,6 @@ public class PurchaseOrderService {
             PurchaseOrderLine line = lineRepo.findById(item.getLineId())
                     .orElseThrow(() -> new RuntimeException("Line not found: " + item.getLineId()));
 
-            // defensive: treat null receivedQty as zero
             Integer currentReceived = line.getReceivedQty();
             if (currentReceived == null) currentReceived = 0;
 
@@ -106,12 +103,10 @@ public class PurchaseOrderService {
                 throw new RuntimeException("Excessive receiving for line " + item.getLineId() + " (remaining: " + remaining + ")");
             }
 
-            // update received qty safely
             int newReceived = currentReceived + item.getQuantityReceived();
             line.setReceivedQty(newReceived);
             lineRepo.save(line);
 
-            // create inventory movement INBOUND
             InventoryMovement movement = new InventoryMovement();
             movement.setType(MovementType.INBOUND);
             movement.setQuantity(item.getQuantityReceived());
@@ -123,7 +118,6 @@ public class PurchaseOrderService {
 
             movementRepo.save(movement);
 
-            // update or create inventory row
             Inventory inv = inventoryRepo.findByWarehouseIdAndProductId(
                     warehouse.getId(),
                     line.getProduct().getId()
@@ -140,7 +134,6 @@ public class PurchaseOrderService {
             inventoryRepo.save(inv);
         }
 
-        // after processing all items, check completion
         boolean completed = po.getLines().stream()
                 .allMatch(l -> {
                     Integer r = l.getReceivedQty();
@@ -154,4 +147,5 @@ public class PurchaseOrderService {
         po = poRepo.save(po);
         return mapper.toDTO(po);
     }
+
 }

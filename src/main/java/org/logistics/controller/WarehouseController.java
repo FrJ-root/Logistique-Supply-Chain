@@ -42,4 +42,5 @@ public class WarehouseController {
     public WarehouseDTO deactivate(@PathVariable Long id) {
         return service.deactivate(id);
     }
+
 }

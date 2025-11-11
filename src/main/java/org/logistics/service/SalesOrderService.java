@@ -1,17 +1,16 @@
 package org.logistics.service;
 
-import lombok.RequiredArgsConstructor;
-import org.logistics.dto.SalesOrderDTO;
-import org.logistics.dto.SalesOrderLineDTO;
-import org.logistics.entity.*;
-import org.logistics.enums.MovementType;
-import org.logistics.enums.OrderStatus;
-import org.logistics.enums.ShipmentStatus;
-import org.logistics.repository.*;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.stereotype.Service;
+import org.logistics.dto.SalesOrderLineDTO;
+import org.logistics.enums.ShipmentStatus;
+import org.logistics.enums.MovementType;
+import org.logistics.dto.SalesOrderDTO;
+import org.logistics.enums.OrderStatus;
+import lombok.RequiredArgsConstructor;
+import org.logistics.repository.*;
 import java.time.LocalDateTime;
+import org.logistics.entity.*;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -19,11 +18,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SalesOrderService {
 
-    private final SalesOrderRepository salesOrderRepository;
-    private final ProductRepository productRepository;
     private final ClientRepository clientRepository;
-    private final InventoryRepository inventoryRepository;
+    private final ProductRepository productRepository;
     private final ShipmentRepository shipmentRepository;
+    private final InventoryRepository inventoryRepository;
+    private final SalesOrderRepository salesOrderRepository;
     private final InventoryMovementRepository movementRepository;
 
     private static final int CUT_OFF_HOUR = 15;
@@ -69,11 +68,9 @@ public class SalesOrderService {
             throw new RuntimeException("La commande doit contenir au moins une ligne.");
         }
 
-        // Fetch client
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new RuntimeException("Client non trouvé"));
 
-        // Initialize order
         SalesOrder order = SalesOrder.builder()
                 .client(client)
                 .status(OrderStatus.CREATED)
@@ -89,7 +86,6 @@ public class SalesOrderService {
                 throw new RuntimeException("Produit inactif : " + product.getName());
             }
 
-            // Create line
             SalesOrderLine line = new SalesOrderLine();
             line.setProduct(product);
             line.setQuantity(lineDTO.getQuantity());
@@ -99,7 +95,6 @@ public class SalesOrderService {
             order.getLines().add(line);
         }
 
-        // Save order and lines (cascade if configured)
         return salesOrderRepository.save(order);
     }
 
@@ -115,8 +110,8 @@ public class SalesOrderService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime plannedReservationTime = now;
         if (now.toLocalTime().isAfter(LocalTime.of(CUT_OFF_HOUR, 0))) {
-            plannedReservationTime = nextWorkingDay(now).withHour(9).withMinute(0); // plan next working day 9h
-            order.setReservedAt(plannedReservationTime); // store planned reservation time
+            plannedReservationTime = nextWorkingDay(now).withHour(9).withMinute(0);
+            order.setReservedAt(plannedReservationTime);
         } else {
             order.setReservedAt(now);
         }
@@ -181,7 +176,7 @@ public class SalesOrderService {
 
     private LocalDateTime nextWorkingDay(LocalDateTime dateTime) {
         LocalDateTime nextDay = dateTime.plusDays(1);
-        while (nextDay.getDayOfWeek().getValue() >= 6) { // 6=Saturday, 7=Sunday
+        while (nextDay.getDayOfWeek().getValue() >= 6) {
             nextDay = nextDay.plusDays(1);
         }
         return nextDay;
@@ -307,6 +302,5 @@ public class SalesOrderService {
         order.setStatus(OrderStatus.DELIVERED);
         return salesOrderRepository.save(order);
     }
-
 
 }

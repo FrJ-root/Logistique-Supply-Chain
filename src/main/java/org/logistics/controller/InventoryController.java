@@ -1,14 +1,13 @@
 package org.logistics.controller;
 
-import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
 import org.logistics.dto.InventoryMovementDTO;
 import org.logistics.entity.InventoryMovement;
-import org.logistics.enums.Role;
 import org.logistics.service.InventoryService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
+import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
+import org.logistics.enums.Role;
 import java.util.Map;
 
 @RestController

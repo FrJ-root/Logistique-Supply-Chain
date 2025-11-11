@@ -1,9 +1,8 @@
 package org.logistics.controller;
 
-import org.logistics.entity.TestEntity;
-import org.logistics.service.TestService;
 import org.springframework.web.bind.annotation.*;
-
+import org.logistics.service.TestService;
+import org.logistics.entity.TestEntity;
 import java.util.List;
 
 @RestController
@@ -25,4 +24,5 @@ public class TestController {
     public TestEntity save(@RequestParam String message) {
         return service.save(message);
     }
+
 }

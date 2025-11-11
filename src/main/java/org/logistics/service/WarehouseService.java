@@ -1,17 +1,16 @@
 package org.logistics.service;
 
-import lombok.RequiredArgsConstructor;
-import org.logistics.dto.WarehouseDTO;
-import org.logistics.entity.InventoryMovement;
-import org.logistics.entity.Warehouse;
-import org.logistics.mapper.WarehouseMapper;
-import org.logistics.repository.InventoryMovementRepository;
-import org.logistics.repository.WarehouseRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import org.logistics.dto.WarehouseDTO;
+import org.logistics.entity.Warehouse;
+import org.logistics.mapper.WarehouseMapper;
+import org.logistics.entity.InventoryMovement;
+import org.springframework.stereotype.Service;
+import org.logistics.repository.WarehouseRepository;
+import org.logistics.repository.InventoryMovementRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -76,4 +75,5 @@ public class WarehouseService {
         w.setActive(false);
         return mapper.toDTO(warehouseRepository.save(w));
     }
+
 }

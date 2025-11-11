@@ -1,29 +1,28 @@
 package org.logistics.service;
 
-import lombok.RequiredArgsConstructor;
-import org.logistics.dto.InventoryMovementDTO;
-import org.logistics.entity.Inventory;
-import org.logistics.entity.InventoryMovement;
-import org.logistics.entity.Product;
-import org.logistics.entity.Warehouse;
-import org.logistics.enums.MovementType;
+import org.springframework.transaction.annotation.Transactional;
 import org.logistics.repository.InventoryMovementRepository;
 import org.logistics.repository.InventoryRepository;
-import org.logistics.repository.ProductRepository;
 import org.logistics.repository.WarehouseRepository;
+import org.logistics.repository.ProductRepository;
+import org.logistics.entity.InventoryMovement;
+import org.logistics.dto.InventoryMovementDTO;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
+import org.logistics.enums.MovementType;
+import lombok.RequiredArgsConstructor;
+import org.logistics.entity.Inventory;
+import org.logistics.entity.Warehouse;
+import org.logistics.entity.Product;
 import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
 public class InventoryService {
 
-    private final InventoryRepository inventoryRepository;
     private final InventoryMovementRepository movementRepository;
-    private final ProductRepository productRepository;
+    private final InventoryRepository inventoryRepository;
     private final WarehouseRepository warehouseRepository;
+    private final ProductRepository productRepository;
 
     @Transactional
     public InventoryMovement recordInbound(InventoryMovementDTO dto) {
