@@ -28,8 +28,12 @@
 	</scm>
 	<properties>
 		<java.version>17</java.version>
-	</properties>
-	<dependencies>
+        <sonar.projectKey>logistics-api</sonar.projectKey>
+        <sonar.projectName>Logistics API</sonar.projectName>
+        <sonar.coverage.exclusions>**/dto/**,**/mapper/**</sonar.coverage.exclusions>
+    </properties>
+
+    <dependencies>
 
         <dependency>
             <groupId>org.mapstruct</groupId>
@@ -94,6 +98,12 @@
 
 	<build>
 		<plugins>
+
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>3.10.0.2594</version>
+            </plugin>
 
             <plugin>
                 <groupId>org.jacoco</groupId>

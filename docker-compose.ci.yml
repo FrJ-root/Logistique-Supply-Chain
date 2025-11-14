@@ -1,0 +1,28 @@
+services:
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins-conf
+    ports:
+      - "8081:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonar
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonar_data:/opt/sonarqube/data
+      - sonar_logs:/opt/sonarqube/logs
+      - sonar_extensions:/opt/sonarqube/extensions
+
+volumes:
+  jenkins_home:
+  sonar_data:
+  sonar_logs:
+  sonar_extensions:
