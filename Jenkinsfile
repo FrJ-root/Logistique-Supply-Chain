@@ -33,19 +33,22 @@ pipeline {
       }
     }
 
-    stage('SonarQube Analysis') {
-      steps {
-        withSonarQubeEnv("$SONARQUBE") {
-          sh """
-           ./mvnw sonar:sonar \
-             -Dsonar.projectKey=logistics-api \
-             -Dsonar.host.url=${SONAR_HOST_URL} \
-             -Dsonar.login=${SONAR_TOKEN} \
-             -Dsonar.coverage.jacoco.xmlReportPaths=${JACOCO_XML_PATH}
-          """
-        }
-      }
-    }
+   stage('SonarQube Analysis') {
+     steps {
+       script {
+         withSonarQubeEnv("${SONARQUBE}") {
+           sh '''
+             ./mvnw sonar:sonar \
+               -Dsonar.projectKey=logistics-api \
+               -Dsonar.host.url=$SONAR_HOST_URL \
+               -Dsonar.login=$SONAR_TOKEN \
+               -Dsonar.coverage.jacoco.xmlReportPaths=$JACOCO_XML_PATH
+           '''
+         }
+       }
+     }
+   }
+
 
     stage('Quality Gate') {
       steps {
