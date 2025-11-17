@@ -22,13 +22,11 @@ pipeline {
 
     stage('Build & Test') {
       steps {
-        // run unit tests, generate jacoco xml
         sh './mvnw clean verify -DskipITs -B'
       }
       post {
         always {
           junit '**/target/surefire-reports/*.xml'
-          // publish JaCoCo report to Jenkins (plugin reads the exec/xml)
           jacoco(execPattern: '**/target/jacoco.exec', classPattern: 'target/classes', sourcePattern: 'src/main/java', inclusionPattern: '**/*.class')
           archiveArtifacts artifacts: 'target/*.jar, target/**/*.xml, target/site/jacoco/**', allowEmptyArchive: true
         }
