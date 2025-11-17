@@ -7,7 +7,7 @@ pipeline {
   }
 
   environment {
-    SONARQUBE = 'SonarServer'              // name configured in Jenkins -> Configure System
+    SONARQUBE = 'SonarServer'
     SONAR_TOKEN = credentials('sonar-token')
     MAVEN_OPTS = "-DskipTests=false"
     JACOCO_XML_PATH = "target/site/jacoco/jacoco.xml"
@@ -51,11 +51,18 @@ pipeline {
 
 
     stage('Quality Gate') {
-      steps {
-        timeout(time: 5, unit: 'MINUTES') {
-          waitForQualityGate abortPipeline: true
+        tools {
+            maven 'Maven'
+            jdk 'JDK17'
         }
-      }
+        environment {
+            scannerHome = tool 'SonarScanner'
+        }
+        steps {
+            timeout(time: 10, unit: 'MINUTES') {
+                waitForQualityGate abortPipeline: true
+            }
+        }
     }
 
     stage('Package') {
@@ -68,9 +75,7 @@ pipeline {
     stage('Build Docker Image') {
       when { branch 'main' }
       steps {
-        // If you mount docker socket into Jenkins container this will build
         sh 'docker build -t myregistry.example.com/logistics-api:${GIT_COMMIT} .'
-        // optional: docker push ...
       }
     }
   }
@@ -78,8 +83,6 @@ pipeline {
   post {
     failure {
       echo "Build failed - send notification"
-      // Add steps to notify Slack or Email here, example with slackSend if plugin configured
-      // slackSend(channel: '#ci', color: 'danger', message: "Build failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
     }
     success {
       echo "Pipeline Success! Build ${env.BUILD_NUMBER}"
