@@ -21,18 +21,6 @@ public class SalesOrderServiceTest {
 
     SalesOrderService service;
 
-    @BeforeEach
-    void setup() {
-        service = new SalesOrderService(
-                clientRepo,
-                productRepo,
-                shipmentRepo,
-                inventoryRepo,
-                orderRepo,
-                movementRepo
-        );
-    }
-
     @Test
     void shouldPreventReservationWhenStockIsNegative() {
         Product p = Product.builder().id(1L).active(true).build();
@@ -53,29 +41,6 @@ public class SalesOrderServiceTest {
         assertThrows(RuntimeException.class,
                 () -> service.reserveOrder(10L, false)
         );
-    }
-
-    @Test
-    void shouldReserveStockCorrectly() {
-        Product p = Product.builder().id(1L).active(true).build();
-        Client c = Client.builder().id(1L).build();
-
-        SalesOrder order = SalesOrder.builder()
-                .id(10L)
-                .status(OrderStatus.CREATED)
-                .client(c)
-                .lines(List.of(SalesOrderLine.builder().product(p).quantity(5).build()))
-                .build();
-
-        when(orderRepo.findById(10L)).thenReturn(Optional.of(order));
-        when(inventoryRepo.findByProduct(p)).thenReturn(
-                List.of(Inventory.builder().qtyOnHand(10).qtyReserved(0).build())
-        );
-        when(orderRepo.save(any())).thenAnswer(i -> i.getArguments()[0]);
-
-        SalesOrder result = service.reserveOrder(10L, false);
-
-        assertEquals(OrderStatus.RESERVED, result.getStatus());
     }
 
     @Test
@@ -136,6 +101,41 @@ public class SalesOrderServiceTest {
 
         assertEquals(OrderStatus.CREATED, oldOrder.getStatus());
         assertNull(oldOrder.getReservedAt());
+    }
+
+    @Test
+    void shouldReserveStockCorrectly() {
+        Product p = Product.builder().id(1L).active(true).build();
+        Client c = Client.builder().id(1L).build();
+
+        SalesOrder order = SalesOrder.builder()
+                .id(10L)
+                .status(OrderStatus.CREATED)
+                .client(c)
+                .lines(List.of(SalesOrderLine.builder().product(p).quantity(5).build()))
+                .build();
+
+        when(orderRepo.findById(10L)).thenReturn(Optional.of(order));
+        when(inventoryRepo.findByProduct(p)).thenReturn(
+                List.of(Inventory.builder().qtyOnHand(10).qtyReserved(0).build())
+        );
+        when(orderRepo.save(any())).thenAnswer(i -> i.getArguments()[0]);
+
+        SalesOrder result = service.reserveOrder(10L, false);
+
+        assertEquals(OrderStatus.RESERVED, result.getStatus());
+    }
+
+    @BeforeEach
+    void setup() {
+        service = new SalesOrderService(
+                clientRepo,
+                productRepo,
+                shipmentRepo,
+                inventoryRepo,
+                orderRepo,
+                movementRepo
+        );
     }
 
 }

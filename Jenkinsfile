@@ -1,73 +1,87 @@
 pipeline {
-    agent any
+  agent any
 
-    tools {
-        jdk 'JDK17'
-        maven 'Maven'
+  tools {
+    jdk 'JDK17'
+    maven 'Maven'
+  }
+
+  environment {
+    SONARQUBE = 'SonarServer'              // name configured in Jenkins -> Configure System
+    SONAR_TOKEN = credentials('sonar-token')
+    MAVEN_OPTS = "-DskipTests=false"
+    JACOCO_XML_PATH = "target/site/jacoco/jacoco.xml"
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
     }
 
-    environment {
-        SONAR_SERVER = 'SonarServer'
-        SONAR_TOKEN = credentials('sonar-token')
+    stage('Build & Test') {
+      steps {
+        // run unit tests, generate jacoco xml
+        sh './mvnw clean verify -DskipITs -B'
+      }
+      post {
+        always {
+          junit '**/target/surefire-reports/*.xml'
+          // publish JaCoCo report to Jenkins (plugin reads the exec/xml)
+          jacoco(execPattern: '**/target/jacoco.exec', classPattern: 'target/classes', sourcePattern: 'src/main/java', inclusionPattern: '**/*.class')
+          archiveArtifacts artifacts: 'target/*.jar, target/**/*.xml, target/site/jacoco/**', allowEmptyArchive: true
+        }
+      }
     }
 
-    stages {
-
-        stage('Checkout') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/your-repo/logistics-api.git'
-            }
+    stage('SonarQube Analysis') {
+      steps {
+        withSonarQubeEnv("$SONARQUBE") {
+          sh """
+           ./mvnw sonar:sonar \
+             -Dsonar.projectKey=logistics-api \
+             -Dsonar.host.url=${SONAR_HOST_URL} \
+             -Dsonar.login=${SONAR_TOKEN} \
+             -Dsonar.coverage.jacoco.xmlReportPaths=${JACOCO_XML_PATH}
+          """
         }
-
-        stage('Build & Test') {
-            steps {
-                sh './mvnw clean verify'
-            }
-            post {
-                always {
-                    junit '**/target/surefire-reports/*.xml'
-                }
-            }
-        }
-
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarServer') {
-                    sh './mvnw sonar:sonar -Dsonar.projectKey=logistics-api'
-                }
-            }
-        }
-
-        stage("Quality Gate") {
-            steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-
-        stage('Package') {
-            steps {
-                sh './mvnw package -DskipTests'
-            }
-        }
-
-        // Optional Docker
-        stage('Build Docker Image') {
-            when { branch 'main' }
-            steps {
-                sh 'docker build -t logistics-api:latest .'
-            }
-        }
+      }
     }
 
-    post {
-        success {
-            echo "Pipeline Success! 🚀"
+    stage('Quality Gate') {
+      steps {
+        timeout(time: 5, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: true
         }
-        failure {
-            echo "Pipeline Failed ❌"
-        }
+      }
     }
+
+    stage('Package') {
+      steps {
+        sh './mvnw -DskipTests package -B'
+        archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+      }
+    }
+
+    stage('Build Docker Image') {
+      when { branch 'main' }
+      steps {
+        // If you mount docker socket into Jenkins container this will build
+        sh 'docker build -t myregistry.example.com/logistics-api:${GIT_COMMIT} .'
+        // optional: docker push ...
+      }
+    }
+  }
+
+  post {
+    failure {
+      echo "Build failed - send notification"
+      // Add steps to notify Slack or Email here, example with slackSend if plugin configured
+      // slackSend(channel: '#ci', color: 'danger', message: "Build failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+    }
+    success {
+      echo "Pipeline Success! Build ${env.BUILD_NUMBER}"
+    }
+  }
 }
