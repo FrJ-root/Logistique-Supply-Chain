@@ -26,11 +26,17 @@ pipeline {
         sh './mvnw clean verify -DskipITs -B'
       }
       post {
-        always {
-          junit '**/target/surefire-reports/*.xml'
-          jacoco execPattern: '**/target/jacoco.exec', classPattern: 'target/classes', sourcePattern: 'src/main/java', inclusionPattern: '**/*.class', xml: true
-          archiveArtifacts artifacts: 'target/*.jar, target/**/*.xml, target/site/jacoco/**', allowEmptyArchive: true
-        }
+          always {
+              junit '**/target/surefire-reports/*.xml'
+              jacoco(
+                  execPattern: '**/target/jacoco.exec',
+                  classPattern: 'target/classes',
+                  sourcePattern: 'src/main/java',
+                  inclusionPattern: '**/*.class',
+                  runAlways: true
+              )
+              archiveArtifacts artifacts: 'target/*.jar, target/**/*.xml, target/site/jacoco/**', allowEmptyArchive: true
+          }
       }
     }
 
