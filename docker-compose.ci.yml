@@ -26,3 +26,4 @@ volumes:
   sonar_data:
   sonar_logs:
   sonar_extensions:
+
