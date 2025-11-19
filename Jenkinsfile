@@ -6,10 +6,12 @@ pipeline {
   }
 
   environment {
-    SONARQUBE = 'SonarServer'
-    SONAR_TOKEN = credentials('sonar-token')
-    MAVEN_OPTS = "-DskipTests=false"
-    JACOCO_XML_PATH = "target/site/jacoco/jacoco.xml"
+      JAVA_HOME = tool name: 'jdk21', type: 'jdk'
+      PATH = "${JAVA_HOME}/bin:${env.PATH}"
+      SONARQUBE = 'SonarServer'
+      SONAR_TOKEN = credentials('sonar-token')
+      MAVEN_OPTS = "-DskipTests=false"
+      JACOCO_XML_PATH = "target/site/jacoco/jacoco.xml"
   }
 
   stages {
@@ -26,7 +28,7 @@ pipeline {
       post {
         always {
           junit '**/target/surefire-reports/*.xml'
-          jacoco(execPattern: '**/target/jacoco.exec', classPattern: 'target/classes', sourcePattern: 'src/main/java', inclusionPattern: '**/*.class')
+          jacoco execPattern: '**/target/jacoco.exec', classPattern: 'target/classes', sourcePattern: 'src/main/java', inclusionPattern: '**/*.class', xml: true
           archiveArtifacts artifacts: 'target/*.jar, target/**/*.xml, target/site/jacoco/**', allowEmptyArchive: true
         }
       }
