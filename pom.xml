@@ -123,6 +123,7 @@
                                 <exclude>**/mapper/**</exclude>
                                 <exclude>**/config/**</exclude>
                                 <exclude>**/controller/**</exclude>
+                                <exclude>**/generated/**</exclude>
                             </excludes>
                         </configuration>
                     </execution>
