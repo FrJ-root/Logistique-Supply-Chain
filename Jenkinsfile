@@ -41,21 +41,21 @@ pipeline {
     }
 
    stage('SonarQube Analysis') {
-     steps {
-       script {
-         withSonarQubeEnv("${SONARQUBE}") {
-           sh '''
-             ./mvnw sonar:sonar \
-               -Dsonar.projectKey=Logistics-API \
-               -Dsonar.host.url=$SONAR_HOST_URL \
-               -Dsonar.login=$SONAR_TOKEN \
-               -Dsonar.coverage.jacoco.xmlReportPaths=$JACOCO_XML_PATH
-           '''
-         }
+       steps {
+           script {
+               withSonarQubeEnv("${SONARQUBE}") {
+                   sh """
+                       ./mvnw sonar:sonar \
+                           -Dsonar.projectKey=Logistics-API \
+                           -Dsonar.host.url=$SONAR_HOST_URL \
+                           -Dsonar.login=$SONAR_TOKEN \
+                           -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+                           -Dsonar.coverage.exclusions=**/dto/**,**/mapper/**
+                   """
+               }
+           }
        }
-     }
    }
-
 
     stage('Quality Gate') {
         steps {
