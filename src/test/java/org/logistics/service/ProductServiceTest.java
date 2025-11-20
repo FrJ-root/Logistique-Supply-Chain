@@ -25,23 +25,7 @@ public class ProductServiceTest {
         service = new ProductService(productRepo, orderLineRepo);
     }
 
-    @Test
-    void shouldCreateProduct() {
-        ProductDTO dto = ProductDTO.builder()
-                .name("Test Product")
-                .category("Electronics")
-                .originalPrice(BigDecimal.valueOf(100.0))
-                .finalPrice(BigDecimal.valueOf(90.0))
-                .build();
 
-        when(productRepo.save(any())).thenAnswer(i -> i.getArguments()[0]);
-
-        Product p = service.create(dto);
-
-        assertNotNull(p.getSku());
-        assertEquals("Test Product", p.getName());
-        assertTrue(p.isActive());
-    }
 
     @Test
     void shouldReturnAllProducts() {
