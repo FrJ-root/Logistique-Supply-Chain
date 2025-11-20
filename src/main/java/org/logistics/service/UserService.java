@@ -8,6 +8,8 @@ import org.logistics.entity.Client;
 import org.logistics.dto.UserDTO;
 import org.logistics.entity.User;
 import org.logistics.enums.Role;
+
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -25,7 +27,7 @@ public class UserService {
                 .filter(user -> user.getPasswordHash().equals(password) && user.isActive());
     }
 
-    public Optional<User> findById(Long id) {
+    public List<User> findById(Long id) {
         return userRepository.findById(id);
     }
 

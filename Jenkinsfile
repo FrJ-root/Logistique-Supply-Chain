@@ -18,19 +18,19 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                echo "🔄 Checking out source code..."
+                echo "Checking out source code..."
                 checkout scm
             }
         }
 
         stage('Build & Test') {
             steps {
-                echo "⚙️ Building project and running tests..."
+                echo "Building project and running tests..."
                 sh './mvnw clean verify -DskipITs -B'
             }
             post {
                 always {
-                    echo "📄 Archiving test results and code coverage..."
+                    echo "Archiving test results and code coverage..."
                     junit '**/target/surefire-reports/*.xml'
                     jacoco(
                         execPattern: '**/target/jacoco.exec',
@@ -69,9 +69,9 @@ pipeline {
                     timeout(time: 10, unit: 'MINUTES') {
                         def qg = waitForQualityGate()
                         if (qg.status != 'OK') {
-                            error "❌ Quality Gate failed: ${qg.status}"
+                            error "Quality Gate failed: ${qg.status}"
                         } else {
-                            echo "✅ Quality Gate passed."
+                            echo "Quality Gate passed."
                         }
                     }
                 }
@@ -80,7 +80,7 @@ pipeline {
 
         stage('Package') {
             steps {
-                echo "📦 Packaging project..."
+                echo "Packaging project..."
                 sh './mvnw -DskipTests package -B'
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
@@ -89,7 +89,7 @@ pipeline {
         stage('Build Docker Image') {
             when { branch 'main' }
             steps {
-                echo "🐳 Building Docker image..."
+                echo "Building Docker image..."
                 sh 'docker build -t myregistry.example.com/logistics-api:${GIT_COMMIT} .'
             }
         }
@@ -97,11 +97,10 @@ pipeline {
 
     post {
         failure {
-            echo "❌ Build failed - sending notifications..."
-            // Add Slack/email notification steps here
+            echo "Build failed - sending notifications..."
         }
         success {
-            echo "🎉 Pipeline Success! Build ${env.BUILD_NUMBER}"
+            echo "Pipeline Success! Build ${env.BUILD_NUMBER}"
         }
     }
 }
