@@ -27,7 +27,7 @@ public class UserService {
                 .filter(user -> user.getPasswordHash().equals(password) && user.isActive());
     }
 
-    public List<User> findById(Long id) {
+    public Optional<User> findById(Long id) {
         return userRepository.findById(id);
     }
 
