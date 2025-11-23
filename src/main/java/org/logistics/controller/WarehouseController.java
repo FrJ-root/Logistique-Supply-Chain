@@ -13,6 +13,11 @@ public class WarehouseController {
 
     private final WarehouseService service;
 
+    @GetMapping("/dashboard")
+    public String warehouseDashboard() {
+        return "Welcome WAREHOUSE MANAGER!";
+    }
+
     @PostMapping
     public WarehouseDTO create(@RequestBody WarehouseDTO dto) {
         return service.create(dto);
