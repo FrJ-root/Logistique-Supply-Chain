@@ -15,6 +15,7 @@ import java.util.List;
 
 public class SalesOrderServiceTest {
 
+    UserRepository userRepo;
     ClientRepository clientRepo;
     ProductRepository productRepo;
     SalesOrderRepository orderRepo;
@@ -26,6 +27,7 @@ public class SalesOrderServiceTest {
 
     @BeforeEach
     void setup() {
+        userRepo = mock(UserRepository.class);
         clientRepo = mock(ClientRepository.class);
         productRepo = mock(ProductRepository.class);
         orderRepo = mock(SalesOrderRepository.class);
@@ -34,6 +36,7 @@ public class SalesOrderServiceTest {
         movementRepo = mock(InventoryMovementRepository.class);
 
         service = new SalesOrderService(
+                userRepo,
                 clientRepo,
                 productRepo,
                 shipmentRepo,

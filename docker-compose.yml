@@ -1,4 +1,5 @@
 services:
+
   postgres:
     image: postgres:15
     container_name: logistics-postgres
@@ -10,6 +11,8 @@ services:
       - "5435:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - logistics-net
 
   pgadmin:
     image: dpage/pgadmin4:7
@@ -21,6 +24,8 @@ services:
       - "5052:80"
     depends_on:
       - postgres
+    networks:
+      - logistics-net
 
   app:
     build: .
@@ -28,13 +33,57 @@ services:
     ports:
       - "8082:8082"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/logisticsdb
-      SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: admin
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SPRING_JPA_SHOW_SQL: "true"
+      - SERVER_PORT=8082
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/logisticsdb
+      - SPRING_DATASOURCE_USERNAME=admin
+      - SPRING_DATASOURCE_PASSWORD=admin
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=true
     depends_on:
       - postgres
+      - logstash
+    networks:
+      - logistics-net
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
+    container_name: logistics-es
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    networks:
+      - logistics-net
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.10
+    container_name: logistics-kibana
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    networks:
+      - logistics-net
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.17.10
+    container_name: logistics-logstash
+    volumes:
+      - ./logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - "5000:5000"
+    environment:
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m
+    depends_on:
+      - elasticsearch
+    networks:
+      - logistics-net
+
+networks:
+  logistics-net:
+    driver: bridge
 volumes:
   pgdata:

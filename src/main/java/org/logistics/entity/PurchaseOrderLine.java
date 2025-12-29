@@ -21,6 +21,8 @@ public class PurchaseOrderLine {
 
     private Integer quantity;
     private BigDecimal unitPrice;
+
+    @Builder.Default
     private Integer receivedQty = 0;
 
     @ManyToOne

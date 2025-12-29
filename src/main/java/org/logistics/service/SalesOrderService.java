@@ -1,5 +1,7 @@
 package org.logistics.service;
 
+import org.logistics.exception.ResourceNotFoundException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.logistics.dto.SalesOrderLineDTO;
@@ -18,6 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SalesOrderService {
 
+    private final UserRepository userRepository;
     private final ClientRepository clientRepository;
     private final ProductRepository productRepository;
     private final ShipmentRepository shipmentRepository;
@@ -64,6 +67,11 @@ public class SalesOrderService {
 
     @Transactional
     public SalesOrder createOrder(SalesOrderDTO dto, Long clientId) {
+
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+
         if (dto.getLines() == null || dto.getLines().isEmpty()) {
             throw new RuntimeException("La commande doit contenir au moins une ligne.");
         }
@@ -301,6 +309,24 @@ public class SalesOrderService {
 
         order.setStatus(OrderStatus.DELIVERED);
         return salesOrderRepository.save(order);
+    }
+
+    private void checkOwnership(SalesOrder order) {
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                .stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin && !order.getClient().getUser().getEmail().equals(currentUserEmail)) {
+            throw new RuntimeException("Accès refusé : vous n'êtes pas propriétaire de cette commande");
+        }
+    }
+
+    @Transactional
+    public SalesOrder getOrderDetails(Long orderId) {
+        SalesOrder order = salesOrderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Commande non trouvée"));
+        checkOwnership(order); // Validation du point 9
+        return order;
     }
 
 }

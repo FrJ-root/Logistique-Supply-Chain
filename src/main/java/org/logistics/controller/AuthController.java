@@ -1,13 +1,14 @@
 package org.logistics.controller;
 
+import org.logistics.dto.AuthenticationResponse;
+import org.logistics.dto.RegisterRequest;
+import org.logistics.dto.LoginRequest;
+import org.logistics.entity.User;
+import org.logistics.service.UserService;
+import org.logistics.service.AuthenticationService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
-import org.logistics.dto.RegisterRequest;
-import org.logistics.service.UserService;
-import jakarta.servlet.http.HttpSession;
-import org.logistics.dto.LoginRequest;
-import org.logistics.dto.UserDTO;
-import org.logistics.entity.User;
+import lombok.RequiredArgsConstructor;
 import java.util.Map;
 
 @RestController
@@ -15,46 +16,25 @@ import java.util.Map;
 public class AuthController {
 
     private final UserService userService;
+    private final AuthenticationService authService;
 
-    public AuthController(UserService userService) {
+    public AuthController(UserService userService, AuthenticationService authService) {
         this.userService = userService;
+        this.authService = authService;
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpSession session) {
-        var user = userService.login(request.getEmail(), request.getPassword());
-        if (user.isEmpty()) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
+    @PostMapping("/authenticate")
+    public ResponseEntity<AuthenticationResponse> authenticate(@RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.authenticate(request));
+    }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthenticationResponse> refreshToken(@RequestBody Map<String, String> body) {
+        String token = body.get("refreshToken");
+        if (token == null) {
+            return ResponseEntity.badRequest().build();
         }
-
-        session.setAttribute("userId", user.get().getId());
-        session.setAttribute("role", user.get().getRole());
-
-        UserDTO dto = UserDTO.builder()
-                .id(user.get().getId())
-                .email(user.get().getEmail())
-                .role(user.get().getRole())
-                .active(user.get().isActive())
-                .build();
-
-        return ResponseEntity.ok(dto);
-    }
-
-    @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpSession session) {
-        session.invalidate();
-        return ResponseEntity.ok(Map.of("message", "Successfully logged out"));
-    }
-
-    @GetMapping("/me")
-    public ResponseEntity<?> currentUser(HttpSession session) {
-        Object id = session.getAttribute("userId");
-        if (id == null) {
-            return ResponseEntity.status(401).body(Map.of("error", "Not logged in"));
-        }
-
-        var user = userService.findById((Long) id);
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(authService.refreshToken(token));
     }
 
     @PostMapping("/register")
@@ -75,8 +55,6 @@ public class AuthController {
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", "Server error: " + e.getMessage()));
         }
     }
 

@@ -1,73 +1,42 @@
 package org.logistics.config;
 
+import lombok.RequiredArgsConstructor;
 import org.logistics.enums.Role;
-import org.logistics.security.CustomUserDetailsService;
+import org.logistics.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final CustomUserDetailsService userDetailsService;
-
-    public SecurityConfig(CustomUserDetailsService service) {
-        this.userDetailsService = service;
-    }
+    private final JwtAuthenticationFilter jwtAuthFilter;
+    private final AuthenticationProvider authenticationProvider;
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public DaoAuthenticationProvider authProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder());
-        return provider;
-    }
-
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                .csrf(csrf -> csrf.disable()) // Stateless API
                 .authorizeHttpRequests(auth -> auth
-
-                        .requestMatchers("/api/admin/**")
-                        .hasRole(Role.ADMIN.name())
-
-                        .requestMatchers("/api/inventory/**", "/api/shipments/**")
-                        .hasAnyRole(Role.ADMIN.name(), Role.WAREHOUSE_MANAGER.name())
-
-                        .requestMatchers("/api/orders/**", "/api/client/**")
-                        .hasAnyRole(Role.ADMIN.name(), Role.CLIENT.name())
-
-                        .requestMatchers("/actuator/health").permitAll()
-
+                        .requestMatchers("/api/auth/**").permitAll() // Login & Register
+                        // Authorization mapping based on Requirements Table
+                        .requestMatchers("/api/admin/**").hasRole(Role.ADMIN.name())
+                        .requestMatchers("/api/inventory/**").hasAnyRole(Role.ADMIN.name(), Role.WAREHOUSE_MANAGER.name())
+                        .requestMatchers("/api/products/**").hasAnyRole(Role.ADMIN.name(), Role.WAREHOUSE_MANAGER.name(), Role.CLIENT.name())
+                        .requestMatchers("/api/shipments/**").hasAnyRole(Role.ADMIN.name(), Role.WAREHOUSE_MANAGER.name(), Role.CLIENT.name())
                         .anyRequest().authenticated()
                 )
-                .httpBasic(Customizer.withDefaults());
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider)
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
-    @Bean
-    public AuthenticationManager authManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
-
 }

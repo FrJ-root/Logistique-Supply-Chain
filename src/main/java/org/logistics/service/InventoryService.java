@@ -1,5 +1,7 @@
 package org.logistics.service;
 
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.transaction.annotation.Transactional;
 import org.logistics.repository.InventoryMovementRepository;
 import org.logistics.repository.InventoryRepository;
@@ -15,6 +17,7 @@ import org.logistics.entity.Warehouse;
 import org.logistics.entity.Product;
 import java.time.LocalDateTime;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InventoryService {
@@ -26,6 +29,11 @@ public class InventoryService {
 
     @Transactional
     public InventoryMovement recordInbound(InventoryMovementDTO dto) {
+
+        // Ajout au contexte MDC pour Elasticsearch
+        MDC.put("productId", dto.getProductId().toString());
+        log.info("Réception de stock effectuée. Quantité: {}", dto.getQuantity());
+
         if (dto.getQuantity() <= 0) {
             throw new RuntimeException("La quantité doit être positive");
         }
@@ -60,6 +68,7 @@ public class InventoryService {
                 .build();
 
         return movementRepository.save(movement);
+        // 4. Suppression du deuxième return qui bloquait la compilation
     }
 
     @Transactional
