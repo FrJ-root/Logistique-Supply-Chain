@@ -82,6 +82,30 @@ services:
     networks:
       - logistics-net
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: logistics-keycloak
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/logisticsdb
+      - KC_DB_USERNAME=admin
+      - KC_DB_PASSWORD=admin
+      - KC_DB_SCHEMA=public
+    command: start-dev --http-relative-path /auth
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - logistics-net
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/auth/health/live" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 networks:
   logistics-net:
     driver: bridge

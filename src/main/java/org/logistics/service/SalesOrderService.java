@@ -1,7 +1,9 @@
 package org.logistics.service;
 
-import org.logistics.exception.ResourceNotFoundException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.logistics.exception.ResourceNotFoundException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.logistics.dto.SalesOrderLineDTO;
@@ -311,13 +313,28 @@ public class SalesOrderService {
         return salesOrderRepository.save(order);
     }
 
-    private void checkOwnership(SalesOrder order) {
-        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
-                .stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+//    private void checkOwnership(SalesOrder order) {
+//        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+//        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+//                .stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+//
+//        if (!isAdmin && !order.getClient().getUser().getEmail().equals(currentUserEmail)) {
+//            throw new RuntimeException("Accès refusé : vous n'êtes pas propriétaire de cette commande");
+//        }
+//    }
 
-        if (!isAdmin && !order.getClient().getUser().getEmail().equals(currentUserEmail)) {
-            throw new RuntimeException("Accès refusé : vous n'êtes pas propriétaire de cette commande");
+    public void checkOwnership(SalesOrder order) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth.getPrincipal() instanceof Jwt) {
+            Jwt jwt = (Jwt) auth.getPrincipal();
+            String keycloakId = jwt.getSubject();
+            boolean isAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+            if (!isAdmin && !order.getClient().getUser().getKeycloakId().equals(keycloakId)) {
+                throw new RuntimeException("Accès refusé : ce n'est pas votre commande !");
+            }
         }
     }
 

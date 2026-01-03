@@ -26,6 +26,9 @@ public class User {
 
     private boolean active = true;
 
+    @Column(unique = true)
+    private String keycloakId;
+
     public static UserBuilder builder() { return new UserBuilder(); }
 
     public static class UserBuilder {
@@ -33,15 +36,16 @@ public class User {
         private String passwordHash;
         private Role role;
         private boolean active = true;
+        private String keycloakId;
 
         public UserBuilder email(String email) { this.email = email; return this; }
         public UserBuilder passwordHash(String passwordHash) { this.passwordHash = passwordHash; return this; }
         public UserBuilder role(Role role) { this.role = role; return this; }
         public UserBuilder active(boolean active) { this.active = active; return this; }
+        public UserBuilder keycloakId(String keycloakId) { this.keycloakId = keycloakId; return this; }
 
         public User build() {
-            return new User(null, email, passwordHash, role, active);
+            return new User(null, email, passwordHash, role, active, keycloakId);
         }
     }
-
 }
