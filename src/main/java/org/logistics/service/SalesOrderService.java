@@ -313,16 +313,6 @@ public class SalesOrderService {
         return salesOrderRepository.save(order);
     }
 
-//    private void checkOwnership(SalesOrder order) {
-//        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-//        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
-//                .stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-//
-//        if (!isAdmin && !order.getClient().getUser().getEmail().equals(currentUserEmail)) {
-//            throw new RuntimeException("Accès refusé : vous n'êtes pas propriétaire de cette commande");
-//        }
-//    }
-
     public void checkOwnership(SalesOrder order) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
@@ -338,11 +328,30 @@ public class SalesOrderService {
         }
     }
 
+    private void validateOwnership(SalesOrder order) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (isAdmin) return;
+
+        if (auth.getPrincipal() instanceof Jwt) {
+            Jwt jwt = (Jwt) auth.getPrincipal();
+            String currentKeycloakId = jwt.getSubject();
+
+            if (!order.getClient().getUser().getKeycloakId().equals(currentKeycloakId)) {
+                throw new RuntimeException("Accès refusé : ressource appartenant à un autre utilisateur.");
+            }
+        }
+    }
+
     @Transactional
     public SalesOrder getOrderDetails(Long orderId) {
         SalesOrder order = salesOrderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Commande non trouvée"));
-        checkOwnership(order); // Validation du point 9
+
+        validateOwnership(order);
+
         return order;
     }
 

@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.MDC;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import java.io.IOException;
 
@@ -15,14 +16,12 @@ public class LogContextFilter implements Filter {
             throws IOException, ServletException {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null) {
-            MDC.put("userEmail", auth.getName());
-            MDC.put("userRole", auth.getAuthorities().toString());
+        if (auth != null && auth.getPrincipal() instanceof Jwt) {
+            Jwt jwt = (Jwt) auth.getPrincipal();
+            MDC.put("userId", jwt.getSubject());
+            MDC.put("userEmail", jwt.getClaimAsString("email"));
+            MDC.put("userRoles", auth.getAuthorities().toString());
         }
-
-        HttpServletRequest req = (HttpServletRequest) request;
-        MDC.put("endpoint", req.getRequestURI());
-        MDC.put("method", req.getMethod());
 
         try {
             chain.doFilter(request, response);

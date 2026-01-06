@@ -7,7 +7,6 @@ import org.logistics.entity.SalesOrder;
 import org.logistics.entity.User;
 import org.logistics.repository.ClientRepository;
 import org.logistics.repository.UserRepository;
-import org.logistics.security.CustomUserDetails;
 import org.logistics.service.SalesOrderService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
