@@ -19,9 +19,9 @@ import org.junit.jupiter.api.Test;
 import org.logistics.entity.User;
 import org.logistics.enums.Role;
 
+@Transactional
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
 public class SecurityIntegrationTest {
 
     @Autowired private MockMvc mockMvc;
@@ -138,4 +138,5 @@ public class SecurityIntegrationTest {
         String response = result.getResponse().getContentAsString();
         return objectMapper.readValue(response, AuthenticationResponse.class).getAccessToken();
     }
+
 }

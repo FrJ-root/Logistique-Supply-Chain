@@ -1,135 +1,361 @@
-# Logistique Supply Chain
+# Logistics Management API
 
-A Spring Boot application for logistics and supply chain management, built with Java 17 and modern technologies.
+## 📦 Overview
 
-## 🚀 Features
+This project is a **modular REST API for logistics management**, designed to handle products, multi-warehouse inventory, suppliers, purchase orders, customer orders, shipments, and full stock traceability.
 
-- RESTful API for supply chain operations
-- PostgreSQL database integration with H2 for development
-- Docker containerization support
-- API documentation with OpenAPI/Swagger
-- Code coverage reporting with JaCoCo
-- Object mapping with MapStruct
-- Data validation and JPA support
+The project is also a **pedagogical reference** demonstrating:
+- clean layered architecture (Controller / Service / Repository / DTO),
+- advanced logistics business rules,
+- modern security approaches (Basic Auth, JWT, Keycloak),
+- CI/CD pipelines with quality gates,
+- observability and auditability.
 
-## 🛠️ Tech Stack
+---
 
-- **Framework**: Spring Boot 3.5.7
-- **Language**: Java 17
-- **Database**: PostgreSQL (production), H2 (development)
-- **Build Tool**: Maven
-- **Containerization**: Docker & Docker Compose
-- **Documentation**: SpringDoc OpenAPI
-- **Testing**: JUnit with JaCoCo coverage
-- **Object Mapping**: MapStruct
-- **Code Simplification**: Lombok
+## 🎯 Project Goals
 
-## 📋 Prerequisites
+### Functional Goals
+- Full traceability of logistics operations
+- Zero negative stock guarantee
+- Automated reservation, shipping, and replenishment rules
+- Clear separation of responsibilities by business role
 
-- Java 17 or higher
-- Maven 3.6+
-- Docker and Docker Compose (optional)
-- PostgreSQL (for production)
+### Technical Goals
+- Clean, testable Spring Boot architecture
+- Centralized security management
+- Automated quality control via CI/CD
+- Measurable and enforceable code quality
 
-## 🚀 Getting Started
+---
 
-### Local Development
+## 🏗️ Technical Stack
 
-1. **Clone the repository**
+- **Backend**: Spring Boot, Spring Web
+- **Persistence**: Spring Data JPA, Hibernate
+- **Mapping**: MapStruct
+- **Validation**: Jakarta Validation
+- **Documentation**: Swagger / OpenAPI
+- **Testing**: JUnit 5, Mockito
+- **Security**:
+    - Spring Security (Basic Auth, JWT)
+    - Keycloak (OIDC, OAuth2)
+- **CI/CD**: Jenkins, Maven Wrapper
+- **Code Quality**: JaCoCo, SonarQube
+- **Observability (optional)**: Elasticsearch, Kibana
+- **Containerization (optional)**: Docker
+
+---
+
+## 🌿 Git Branch Strategy
+
+| Branch | Purpose |
+|------|--------|
+| `main` | Core logistics API (business logic, no advanced security) |
+| `basic-auth` | Spring Security Basic Authentication (POC) |
+| `jwt-sec` | Stateless JWT Access & Refresh Token security |
+| `keycloak` | Full Keycloak integration (OIDC / OAuth2) |
+
+---
+
+## 🔐 Security Architecture
+
+### 1️⃣ Basic Authentication (branch: `basic-auth`)
+
+**Objective**: Understand Spring Security fundamentals.
+
+- HTTP Basic Auth
+- In-memory users
+- Stateless API
+- HTTPS required
+
+**Roles**
+- `ADMIN`
+- `WAREHOUSE_MANAGER`
+- `CLIENT`
+
+**Protected Endpoints**
+- `/api/products/**`
+- `/api/inventory/**`
+- `/api/orders/**`
+- `/api/shipments/**`
+- `/api/admin/**`
+
+**HTTP Status Handling**
+- `200` OK
+- `401` Unauthorized
+- `403` Forbidden
+
+---
+
+### 2️⃣ JWT Security (branch: `jwt-sec`)
+
+**Objective**: Stateless, production-ready API security.
+
+#### Access Token
+- JWT format
+- Contains user ID and roles
+- Short lifespan (≈ 15 minutes)
+- Signed and validated on each request
+
+#### Refresh Token
+- Long lifespan (≈ 7 days)
+- Stored securely
+- Rotation enforced
+- Revoked on logout or account deactivation
+
+#### Error Handling
+- `401`: invalid or expired token
+- `403`: insufficient role
+
+---
+
+### 3️⃣ Keycloak Integration (branch: `keycloak`)
+
+Keycloak is used as the **central Identity & Access Management system**.
+
+#### Realm
+- **Name**: `logistics-realm`
+- No application configuration in `master` realm
+
+#### Responsibilities
+- User authentication
+- Role management
+- Token issuance
+- Session & logout handling
+- Audit logging
+
+#### Roles
+- `ADMIN`
+- `WAREHOUSE_MANAGER`
+- `CLIENT`
+
+#### Groups (recommended)
+| Group | Role |
+|-----|-----|
+| `admins` | ADMIN |
+| `warehouse-managers` | WAREHOUSE_MANAGER |
+| `clients` | CLIENT |
+
+#### OIDC Clients
+
+**Frontend Client**
+- Type: Public
+- Flow: Authorization Code
+- Tokens: Access + Refresh
+
+**API Client**
+- Type: Bearer-only or Confidential
+- Validates tokens issued by Keycloak
+
+#### Token Rules
+- JWT signed by Keycloak
+- Issuer validation (realm)
+- Expiration enforced
+- Revoked on logout or incident
+
+---
+
+## 👥 Business Roles
+
+| Role | Responsibilities |
+|----|------------------|
+| **ADMIN** | Users, products, warehouses, suppliers, purchase orders |
+| **WAREHOUSE_MANAGER** | Stock, movements, reservations, shipments |
+| **CLIENT** | Orders creation, tracking, consultation |
+
+---
+
+## 📚 Functional Scope
+
+### Products & Inventory
+- SKU-based product management
+- Multi-warehouse inventory
+- Stock availability = `qtyOnHand - qtyReserved`
+- Movements: `INBOUND`, `OUTBOUND`, `ADJUSTMENT`
+
+### Orders & Shipments
+- Sales Orders lifecycle:
+  `CREATED → RESERVED → SHIPPED → DELIVERED → CANCELED`
+- Mandatory reservation before shipping
+- Automatic backorders
+- Cut-off time (15h)
+- Shipment capacity per slot
+
+### Suppliers & Purchase Orders
+- Partial or full reception
+- Automatic stock update
+- Full traceability
+
+---
+
+## 🧠 Advanced Business Rules
+
+- ❌ No negative stock (strict)
+- 🔒 Mandatory reservation before shipping
+- 🏬 Multi-warehouse allocation
+- 🔁 Automatic backorders
+- ⏱️ Reservation TTL (24h)
+- 🚚 Shipment slot capacity control
+- 📅 Cut-off logistics time enforcement
+
+---
+
+## 🧩 Architecture
+
+
+### Layers
+- **Controller**: REST endpoints & validation
+- **Service**: Business logic
+- **Repository**: Persistence
+- **DTO**: API contracts (no business logic)
+- **Mapper**: Entity ↔ DTO conversion
+
+---
+
+## ⚠️ Validation & Exception Handling
+
+### Validation
+- `@NotNull`, `@NotBlank`, `@Min`, `@Email`, etc.
+- Applied on DTOs
+- Clear JSON error responses
+
+### Global Exception Handling
+Handled via `@ControllerAdvice`
+
+| Exception | HTTP |
+|--------|------|
+| ResourceNotFoundException | 404 |
+| BusinessException | 400 |
+| ValidationException | 400 |
+| StockUnavailableException | 409 |
+| GenericException | 500 |
+
+---
+
+## 🧪 Testing Strategy
+
+### Unit Tests
+- Stock constraints
+- Reservation & release
+- Status transitions
+- Backorders
+- Cut-off logic
+- Mapper validation
+- Exception scenarios
+
+Run tests:
 ```bash
-git clone https://github.com/FrJ-root/Logistique-Supply-Chain.git
-cd Logistique-Supply-Chain
+mvn test
 ```
 
-2. **Build the project**
-```bash
-./mvnw clean install
-```
+## 🔁 CI/CD Pipeline
+### 🛠️ Tools
 
-3. **Run the application**
-```bash
-./mvnw spring-boot:run
-```
+- Jenkins
+- Maven Wrapper
 
-The application will start on `http://localhost:8080`
+- JaCoCo
 
-### Using Docker
+- SonarQube
 
-1. **Build and run with Docker Compose**
-```bash
-docker-compose up --build
-```
+- Docker (optional)
 
-This will start both the application and PostgreSQL database.
+### ⚙️ Pipeline Steps
 
-## 📚 API Documentation
+- Build on push / pull request
 
-Once the application is running, you can access the API documentation at:
-- Swagger UI: `http://localhost:8080/swagger-ui.html`
-- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+- Run unit tests
 
-## 🧪 Testing
+- Generate coverage report
 
-Run tests with coverage report:
-```bash
-./mvnw clean test
-```
+- SonarQube analysis
 
-Generate JaCoCo coverage report:
-```bash
-./mvnw clean verify
-```
+- Quality Gate enforcement
 
-Coverage reports will be available in `target/site/jacoco/index.html`
+- Package Maven artifacts
 
-## 🐳 Docker
+### 📏 Quality Thresholds
 
-### Build Docker Image
-```bash
-docker build -t logistics-api .
-```
+- Coverage ≥ 80 %
 
-### Run with Docker Compose
-```bash
-docker-compose up -d
-```
+- New code coverage ≥ 90 %
 
-## 📁 Project Structure
+- Duplications ≤ 5 %
 
-```
-src/
-├── main/
-│   ├── java/
-│   │   └── org/logistics/
-│   └── resources/
-└── test/
-    └── java/
-```
+- Bugs & vulnerabilities: 0 accepted
 
-## 🔧 Configuration
+- Maintainability: A
 
-The application uses Spring Boot's configuration system. Key configuration files:
-- `application.properties` - Main application configuration
-- `docker-compose.yml` - Docker services configuration
-- `Dockerfile` - Container build instructions
+DTOs, Mappers, and generated classes are excluded from coverage calculation.
 
-## 🤝 Contributing
+## 📊 Observability (Optional)
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- Elasticsearch for log indexing
 
-## 📝 License
+- Kibana for visualization
 
-This project is open source and available under the [MIT License](LICENSE).
+### Logs
 
-## 👨‍💻 Author
+- application
 
-**FrJ-root**
-- GitHub: [@FrJ-root](https://github.com/FrJ-root)
+- security
 
-## 📞 Support
+- business events
 
-If you have any questions or need help, please open an issue in the GitHub repository.
+No secrets, tokens, or passwords are ever logged.
+
+## 🎓 Pedagogical Context
+### Logistics API
+
+- Start: 29/12/2025
+
+- Deadline: 02/01/2026
+
+- Work mode: Pair programming
+
+### CI/CD & Quality
+
+- Start: 10/11/2025
+
+- Deadline: 14/11/2025
+
+- Work mode: Individual
+
+### Presentation (30 minutes)
+
+- Demo (10 min)
+
+- Code & architecture explanation (10 min)
+
+- Scenario / use case (5 min)
+
+- Q/A (5 min)
+
+## ✅ Deliverables
+
+- Functional logistics API
+
+- Security implementations (Basic Auth, JWT, Keycloak)
+
+- CI/CD pipeline with enforced quality gates
+
+- Test and coverage reports
+
+- Technical documentation
+
+- Final quality report
+
+## 🚀 Conclusion
+
+This project is both a realistic logistics backend and a complete learning path, covering:
+
+- domain-driven business logic
+
+- modern Spring Security
+
+- IAM with Keycloak
+
+- CI/CD and code quality
+
+- observability and auditability
