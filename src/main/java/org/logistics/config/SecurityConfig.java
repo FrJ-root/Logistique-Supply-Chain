@@ -5,6 +5,7 @@ import org.logistics.enums.Role;
 import org.logistics.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -23,14 +24,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // Stateless API
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll() // Login & Register
-                        // Authorization mapping based on Requirements Table
-                        .requestMatchers("/api/admin/**").hasRole(Role.ADMIN.name())
-                        .requestMatchers("/api/inventory/**").hasAnyRole(Role.ADMIN.name(), Role.WAREHOUSE_MANAGER.name())
-                        .requestMatchers("/api/products/**").hasAnyRole(Role.ADMIN.name(), Role.WAREHOUSE_MANAGER.name(), Role.CLIENT.name())
-                        .requestMatchers("/api/shipments/**").hasAnyRole(Role.ADMIN.name(), Role.WAREHOUSE_MANAGER.name(), Role.CLIENT.name())
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/users/**").hasRole("ADMIN")
+                        .requestMatchers("/api/warehouses/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/inventory/**").hasAnyRole("ADMIN", "WAREHOUSE_MANAGER", "CLIENT")
+                        .requestMatchers("/api/inventory/**").hasAnyRole("ADMIN", "WAREHOUSE_MANAGER")
+                        .requestMatchers("/api/sales-orders/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

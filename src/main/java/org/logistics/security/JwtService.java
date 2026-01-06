@@ -33,12 +33,11 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    // MÉTHODE 1 : Pour l'application (utilise l'expiration par défaut)
     public String generateToken(UserDetails userDetails) {
         return generateToken(userDetails, jwtExpiration);
     }
 
-    // MÉTHODE 2 : Pour les tests ou cas spécifiques (avec expiration personnalisée)
+    // AJOUTEZ CETTE MÉTHODE QUI MANQUAIT POUR LES TESTS
     public String generateToken(UserDetails userDetails, long expiration) {
         return buildToken(new HashMap<>(), userDetails, expiration);
     }
@@ -63,11 +62,7 @@ public class JwtService {
     }
 
     private boolean isTokenExpired(String token) {
-        try {
-            return extractExpiration(token).before(new Date());
-        } catch (ExpiredJwtException e) {
-            return true;
-        }
+        return extractExpiration(token).before(new Date());
     }
 
     private Date extractExpiration(String token) {

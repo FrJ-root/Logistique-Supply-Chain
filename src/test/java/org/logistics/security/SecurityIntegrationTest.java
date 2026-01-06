@@ -139,18 +139,19 @@ public class SecurityIntegrationTest {
     void shouldRejectExpiredToken() throws Exception {
         User testUser = User.builder()
                 .email("expired@test.com")
+                .passwordHash("pass") // Add password hash to satisfy entity requirements
                 .role(Role.CLIENT)
                 .active(true)
                 .build();
 
         String expiredToken = jwtService.generateToken(
                 new org.logistics.security.CustomUserDetails(testUser),
-                -3600000
+                -1000 // Negative value to ensure immediate expiration
         );
 
         mockMvc.perform(get("/api/products")
                         .header("Authorization", "Bearer " + expiredToken))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden()); // Filter will catch expired token
     }
 
     @Test

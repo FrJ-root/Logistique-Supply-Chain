@@ -6,6 +6,7 @@ import org.logistics.dto.LoginRequest;
 import org.logistics.entity.RefreshToken;
 import org.logistics.entity.User;
 import org.logistics.repository.RefreshTokenRepository;
+import org.logistics.repository.UserRepository;
 import org.logistics.security.CustomUserDetails;
 import org.logistics.security.JwtService;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,7 +21,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
-    private final UserService userService;
+    private final UserRepository userRepository;
     private final JwtService jwtService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final AuthenticationManager authenticationManager;
@@ -29,7 +30,8 @@ public class AuthenticationService {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
-        var user = userService.findByEmail(request.getEmail())
+
+        var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         var jwtToken = jwtService.generateToken(new CustomUserDetails(user));
@@ -42,16 +44,20 @@ public class AuthenticationService {
     }
 
     @Transactional
-    public AuthenticationResponse refreshToken(String token) {
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
+    public AuthenticationResponse refreshToken(String requestRefreshToken) {
+        // 1. Vérifier si le token existe et n'est pas expiré
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(requestRefreshToken)
                 .filter(t -> t.getExpiryDate().isAfter(Instant.now()))
                 .filter(t -> !t.isRevoked())
-                .orElseThrow(() -> new RuntimeException("Refresh token invalide ou expiré"));
+                .orElseThrow(() -> new RuntimeException("Refresh Token invalide ou expiré"));
 
         User user = refreshToken.getUser();
 
+        // 2. ROTATION : On révoque ou supprime l'ancien token (Sécurité Point 6)
+        // Option simple : Supprimer l'ancien
         refreshTokenRepository.delete(refreshToken);
 
+        // 3. Créer un NOUVEAU couple de tokens
         String newAccessToken = jwtService.generateToken(new CustomUserDetails(user));
         RefreshToken newRefreshToken = createRefreshToken(user);
 
@@ -65,9 +71,9 @@ public class AuthenticationService {
         RefreshToken refreshToken = RefreshToken.builder()
                 .user(user)
                 .token(UUID.randomUUID().toString())
-                .expiryDate(Instant.now().plusMillis(604800000))
+                .revoked(false)
+                .expiryDate(Instant.now().plusMillis(604800000)) // 7 jours
                 .build();
         return refreshTokenRepository.save(refreshToken);
     }
-
 }

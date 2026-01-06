@@ -1,8 +1,8 @@
 package org.logistics.service;
 
-import org.logistics.exception.ResourceNotFoundException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
+import org.logistics.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.logistics.dto.SalesOrderLineDTO;
 import org.logistics.enums.ShipmentStatus;
@@ -321,12 +321,22 @@ public class SalesOrderService {
         }
     }
 
-    @Transactional
+    private void validateOwnership(SalesOrder order) {
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                .stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin && !order.getClient().getUser().getEmail().equals(currentUserEmail)) {
+            throw new RuntimeException("Accès refusé : vous n'êtes pas propriétaire de cette commande");
+        }
+    }
+
+    @Transactional(readOnly = true)
     public SalesOrder getOrderDetails(Long orderId) {
         SalesOrder order = salesOrderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Commande non trouvée"));
-        checkOwnership(order); // Validation du point 9
+        validateOwnership(order); // Enforces ownership
         return order;
     }
-
 }
