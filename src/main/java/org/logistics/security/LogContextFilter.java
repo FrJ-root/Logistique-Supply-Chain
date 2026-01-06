@@ -1,12 +1,12 @@
 package org.logistics.security;
 
-import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.MDC;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import java.io.IOException;
+import jakarta.servlet.*;
+import org.slf4j.MDC;
 
 @Component
 public class LogContextFilter implements Filter {

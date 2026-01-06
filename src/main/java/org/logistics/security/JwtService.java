@@ -37,7 +37,6 @@ public class JwtService {
         return generateToken(userDetails, jwtExpiration);
     }
 
-    // AJOUTEZ CETTE MÉTHODE QUI MANQUAIT POUR LES TESTS
     public String generateToken(UserDetails userDetails, long expiration) {
         return buildToken(new HashMap<>(), userDetails, expiration);
     }

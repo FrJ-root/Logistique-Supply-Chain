@@ -2,7 +2,7 @@ package org.logistics.config;
 
 import lombok.RequiredArgsConstructor;
 import org.logistics.repository.UserRepository;
-import org.logistics.security.CustomUserDetailsService; // L'import devrait maintenant fonctionner
+import org.logistics.security.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
