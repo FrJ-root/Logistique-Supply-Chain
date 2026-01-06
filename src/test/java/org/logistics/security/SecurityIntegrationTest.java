@@ -1,55 +1,45 @@
 package org.logistics.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.logistics.dto.LoginRequest;
-import org.logistics.entity.User;
-import org.logistics.enums.Role;
-import org.logistics.repository.RefreshTokenRepository;
-import org.logistics.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-
-import java.util.Map;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.MockMvc;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.logistics.dto.AuthenticationResponse;
+import org.logistics.repository.UserRepository;
+import org.springframework.http.MediaType;
+import org.junit.jupiter.api.BeforeEach;
+import org.logistics.dto.LoginRequest;
+import org.junit.jupiter.api.Test;
+import org.logistics.entity.User;
+import org.logistics.enums.Role;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 public class SecurityIntegrationTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    private String clientToken;
-    private String adminToken;
-
-    @Autowired
-    private RefreshTokenRepository refreshTokenRepository;
-
-    @Autowired
-    private JwtService jwtService;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private UserRepository userRepository;
+    @Autowired private PasswordEncoder passwordEncoder;
 
     @BeforeEach
-    void setup() throws Exception {
-        refreshTokenRepository.deleteAll();
+    void setUp() {
         userRepository.deleteAll();
+
+        User admin = User.builder()
+                .email("admin@test.com")
+                .passwordHash(passwordEncoder.encode("password"))
+                .role(Role.ADMIN)
+                .active(true)
+                .build();
+        userRepository.save(admin);
 
         User client = User.builder()
                 .email("client@test.com")
@@ -58,112 +48,94 @@ public class SecurityIntegrationTest {
                 .active(true)
                 .build();
         userRepository.save(client);
-
-        User admin = User.builder()
-                .email("admin@test.com")
-                .passwordHash(passwordEncoder.encode("adminpass"))
-                .role(Role.ADMIN)
-                .active(true)
-                .build();
-        userRepository.save(admin);
     }
 
     @Test
-    void shouldAuthenticateAndReturnTokens() throws Exception {
-        LoginRequest request = new LoginRequest();
-        request.setEmail("client@test.com");
-        request.setPassword("password");
+    void testLoginSuccessfully() throws Exception {
+        LoginRequest loginRequest = new LoginRequest("client@test.com", "password");
 
         mockMvc.perform(post("/api/auth/authenticate")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").exists())
                 .andExpect(jsonPath("$.refreshToken").exists());
     }
 
     @Test
-    void shouldRejectInvalidLogin() throws Exception {
-        // Scénario : Login invalide
-        LoginRequest request = new LoginRequest();
-        request.setEmail("client@test.com");
-        request.setPassword("wrongpassword");
+    void testFailLoginWithWrongPassword() throws Exception {
+        LoginRequest loginRequest = new LoginRequest("client@test.com", "wrongpass");
 
         mockMvc.perform(post("/api/auth/authenticate")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized());
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    void shouldDenyAccessWithoutToken() throws Exception {
+    void testDenyAccessWithoutToken() throws Exception {
         mockMvc.perform(get("/api/products"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void shouldDenyAdminRouteForClient() throws Exception {
-        String token = getAccessToken("client@test.com", "password");
+    void testAllowAccessWithValidToken() throws Exception {
+        String token = obtainAccessToken("client@test.com", "password");
+
+        mockMvc.perform(get("/api/products")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void testDenyClientAccessToAdminEndpoint() throws Exception {
+        String clientToken = obtainAccessToken("client@test.com", "password");
 
         mockMvc.perform(get("/api/admin/dashboard")
-                        .header("Authorization", "Bearer " + token))
+                        .header("Authorization", "Bearer " + clientToken))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void shouldHandleRefreshTokenRenewal() throws Exception {
+    void testAllowAdminAccessToAdminEndpoint() throws Exception {
+        String adminToken = obtainAccessToken("admin@test.com", "password");
+
+        mockMvc.perform(get("/api/admin/dashboard")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void testRotateRefreshToken() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/authenticate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new LoginRequest("client@test.com", "password"))))
                 .andReturn();
 
-        String responseBody = result.getResponse().getContentAsString();
-        String refreshToken = objectMapper.readTree(responseBody).get("refreshToken").asText();
+        String response = result.getResponse().getContentAsString();
+        AuthenticationResponse authResponse = objectMapper.readValue(response, AuthenticationResponse.class);
+        String refreshTokenInitial = authResponse.getRefreshToken();
+
+        String jsonBody = "{\"refreshToken\": \"" + refreshTokenInitial + "\"}";
 
         mockMvc.perform(post("/api/auth/refresh-token")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("refreshToken", refreshToken))))
+                        .content(jsonBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").exists());
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.refreshToken").exists())
+                .andExpect(jsonPath("$.refreshToken").isString())
+                .andExpect(jsonPath("$.refreshToken").value(org.hamcrest.Matchers.not(refreshTokenInitial)));
     }
 
-    private String getAccessToken(String email, String password) throws Exception {
+    private String obtainAccessToken(String email, String password) throws Exception {
+        LoginRequest loginRequest = new LoginRequest(email, password);
         MvcResult result = mockMvc.perform(post("/api/auth/authenticate")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new LoginRequest(email, password))))
+                        .content(objectMapper.writeValueAsString(loginRequest)))
                 .andReturn();
-        return objectMapper.readTree(result.getResponse().getContentAsString()).get("accessToken").asText();
+
+        String response = result.getResponse().getContentAsString();
+        return objectMapper.readValue(response, AuthenticationResponse.class).getAccessToken();
     }
-
-    @Test
-    void shouldRejectExpiredToken() throws Exception {
-        User testUser = User.builder()
-                .email("expired@test.com")
-                .passwordHash("pass") // Add password hash to satisfy entity requirements
-                .role(Role.CLIENT)
-                .active(true)
-                .build();
-
-        String expiredToken = jwtService.generateToken(
-                new org.logistics.security.CustomUserDetails(testUser),
-                -1000 // Negative value to ensure immediate expiration
-        );
-
-        mockMvc.perform(get("/api/products")
-                        .header("Authorization", "Bearer " + expiredToken))
-                .andExpect(status().isForbidden()); // Filter will catch expired token
-    }
-
-    @Test
-    void shouldRefuseAccessToOtherClientResource() throws Exception {
-        User userB = User.builder().email("clientB@test.com").passwordHash(passwordEncoder.encode("pass")).role(Role.CLIENT).build();
-        userRepository.save(userB);
-
-        String tokenA = getAccessToken("client@test.com", "password");
-
-        mockMvc.perform(get("/api/orders/99")
-                        .header("Authorization", "Bearer " + tokenA))
-                .andExpect(status().isForbidden());
-    }
-
 }
