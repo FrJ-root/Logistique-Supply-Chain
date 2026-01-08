@@ -336,7 +336,7 @@ public class SalesOrderService {
     public SalesOrder getOrderDetails(Long orderId) {
         SalesOrder order = salesOrderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Commande non trouvée"));
-        validateOwnership(order); // Enforces ownership
+        validateOwnership(order);
         return order;
     }
 }
